@@ -1,17 +1,31 @@
 INFO - web_server - Launching the emhass webserver at: http://0.0.0.0:5000
 INFO - web_server - Home Assistant data fetch will be performed using url: https://myhass.duckdns.org/
 INFO - web_server - The data path is: C:\Users\jacob\Documents\VS_program\emhass-test\src\emhass\data
-INFO - web_server - The logging is: INFO
+INFO - web_server - The logging is: DEBUG
 INFO - web_server - Using core emhass version: 0.12.8
-INFO - web_server - EMHASS server online, serving index.html...
-INFO - web_server - The data container dictionary is empty... Please launch an optimization task
-INFO - web_server - EMHASS server online, serving index.html...
-INFO - web_server - The data container dictionary is empty... Please launch an optimization task
 INFO - web_server - serving configuration.html...
-INFO - web_server - config.json does not exist, or has not been passed. config parameters may default to config_defaults.json
-INFO - web_server - you may like to generate the config.json file on the configuration page
-INFO - web_server - serving configuration.html...
-INFO - web_server - config.json does not exist, or has not been passed. config parameters may default to config_defaults.json
-INFO - web_server - you may like to generate the config.json file on the configuration page
+DEBUG - web_server - Obtaining current saved parameters as config
+INFO - web_server - Obtaining parameters from config.json:
+DEBUG - web_server - Converting param to config
+WARNING - web_server - Some secret parameters values are still matching their defaults
+DEBUG - web_server - Converting param to config
+WARNING - web_server - Some secret parameters values are still matching their defaults
+INFO - web_server - Saved parameters from webserver
 INFO - web_server - EMHASS server online, serving index.html...
 INFO - web_server - The data container dictionary is empty... Please launch an optimization task
+INFO - web_server -  >> Obtaining params: 
+INFO - web_server - Passed runtime parameters: {'load_cost_forecast': [0.269, 0.31, 0.353, 0.37, 0.429, 0.376, 0.474, 1.036, 0.501, 0.598, 0.608, 0.147, 0.102, 0.085, 0.097, 0.157, 0.152, 0.212, 0.255, 0.172, 0.088, 0.076, 0.037, 0.01], 'prod_price_forecast': [0.028, 0.008, 0.005, 0.005, 0.006, 0.003, 0.002, -0.001, 0.002, 0.001, -0.003, -0.048, -0.137, -0.128, -0.048, -0.002, 0.016, 0.033, 0.04, 0.026, 0.002, 0.001, -0.002, -0.002]}
+INFO - web_server -  >> Setting input data dict
+INFO - web_server - Setting up needed data
+DEBUG - web_server - setting`passed_data:days_to_retrieve` to 9 for fit/predict/tune
+ERROR - web_server - Unable to access Home Assistance instance, check URL
+ERROR - web_server - If using addon, try setting url and token to 'empty'
+INFO - web_server - EMHASS server online, serving index.html...
+INFO - web_server - The data container dictionary is empty... Please launch an optimization task
+INFO - web_server -  >> Obtaining params: 
+INFO - web_server - Passed runtime parameters: {'load_cost_forecast': [0.269, 0.31, 0.353, 0.37, 0.429, 0.376, 0.474, 1.036, 0.501, 0.598, 0.608, 0.147, 0.102, 0.085, 0.097, 0.157, 0.152, 0.212, 0.255, 0.172, 0.088, 0.076, 0.037, 0.01], 'prod_price_forecast': [0.028, 0.008, 0.005, 0.005, 0.006, 0.003, 0.002, -0.001, 0.002, 0.001, -0.003, -0.048, -0.137, -0.128, -0.048, -0.002, 0.016, 0.033, 0.04, 0.026, 0.002, 0.001, -0.002, -0.002]}
+INFO - web_server -  >> Setting input data dict
+INFO - web_server - Setting up needed data
+DEBUG - web_server - setting`passed_data:days_to_retrieve` to 9 for fit/predict/tune
+ERROR - web_server - Unable to access Home Assistance instance, check URL
+ERROR - web_server - If using addon, try setting url and token to 'empty'
