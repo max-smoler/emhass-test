@@ -1,0 +1,67 @@
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+sensor: !include sensors.yaml
+
+template:
+  - sensor:
+      - name: "Nordpool Today's Prices"
+        unique_id: nordpool_today_prices
+        unit_of_measurement: SEK/kWh
+        state: "{{ state_attr('sensor.nordpool_kwh_se1_sek_3_10_025', 'today') }}"
+
+      - name: "Nordpool Tomorrow's Prices"
+        unique_id: nordpool_tomorrow_prices
+        unit_of_measurement: SEK/kWh
+        state: "{{ state_attr('sensor.nordpool_kwh_se1_sek_3_10_025', 'tomorrow') }}"
+
+      - name: "Nordpool Tomorrow Raw Prices"
+        unique_id: nordpool_tomorrow_raw_prices
+        unit_of_measurement: SEK/kWh
+        state: "{{ state_attr('sensor.nordpool_kwh_se1_sek_3_10_025', 'raw_tomorrow') }}"
+
+      - name: "Nordpool Today Raw Prices"
+        unique_id: nordpool_today_raw_prices
+        unit_of_measurement: SEK/kWh
+        state: "{{ state_attr('sensor.nordpool_kwh_se1_sek_3_10_025', 'raw_today') }}"
+
+      - name: "Current Price"
+        unique_id: nordpool_current_price
+        unit_of_measurement: SEK/kWh
+        state: "{{ state_attr('sensor.nordpool_kwh_se1_sek_3_10_025', 'current_price') }}"
+
+      - name: "Peak Hours Price"
+        unique_id: nordpool_peak_price
+        unit_of_measurement: SEK/kWh
+        state: "{{ state_attr('sensor.nordpool_kwh_se1_sek_3_10_025', 'peak') }}"
+      
+      - name: "Max Grid Power Forecast"
+        unique_id: max_grid_power_forecast
+        unit_of_measurement: "W"
+        state: "{{ state_attr('sensor.p_grid_forecast', 'forecasts') | map(attribute='p_grid_forecast') | map('integer') | max }}"
+
+recorder:
+  purge_keep_days: 30
+  include:
+    entities:
+      - sensor.power_load_no_var_loads
+      - sensor.power_photovoltaics
+      - sensor.total_solar_production
+
+shell_command:
+  trigger_nordpool2_forecast: 'curl -i -H "Content-Type: application/json" -X POST -d ''{"load_cost_forecast":{{((state_attr(''sensor.nordpool_kwh_se1_sek_3_10_025'', ''raw_today'') | map(attribute=''value'') | list  + state_attr(''sensor.nordpool_kwh_se1_sek_3_10_025'', ''raw_tomorrow'') | map(attribute=''value'') | list))[now().hour:][:24] }},"prod_price_forecast":{{((state_attr(''sensor.nordpool_kwh_se1_sek_3_10_025'', ''raw_today'') | map(attribute=''value'') | list  + state_attr(''sensor.nordpool_kwh_se1_sek_3_10_025'', ''raw_tomorrow'') | map(attribute=''value'') | list))[now().hour:][:24]}},"maximum_power_from_grid":5000}'' http://localhost:5000/action/dayahead-optim'
+  trigger_nordpool_forecast: 'curl -i -H "Content-Type: application/json" -X POST -d ''{"load_cost_forecast":{{((state_attr(''sensor.nordpool_kwh_se1_sek_3_10_025'', ''raw_today'') | map(attribute=''value'') | list  + state_attr(''sensor.nordpool_kwh_se1_sek_3_10_025'', ''raw_tomorrow'') | map(attribute=''value'') | list))[now().hour:][:24] }},"prod_price_forecast":{{((state_attr(''sensor.nordpool_kwh_se1_sek_3_10_025'', ''raw_today'') | map(attribute=''value'') | list  + state_attr(''sensor.nordpool_kwh_se1_sek_3_10_025'', ''raw_tomorrow'') | map(attribute=''value'') | list))[now().hour:][:24]}}}'' http://localhost:5000/action/dayahead-optim'
+  dayahead_optim: 'curl -i -H "Content-Type: application/json" -X POST -d ''{}'' http://localhost:5000/action/dayahead-optim'
+  publish_data: 'curl -i -H "Content-Type: application/json" -X POST -d ''{}'' http://localhost:5000/action/publish-data'
+  trigger_nordpool_forecast3: >
+    curl -i -H "Content-Type: application/json" -X POST -d '{"load_cost_forecast":{{((state_attr("sensor.nordpool_kwh_se1_sek_3_10_025", "raw_today") | map(attribute="value") | list  + state_attr("sensor.nordpool_kwh_se1_sek_3_10_025", "raw_tomorrow") | map(attribute="value") | list))[now().hour:][:24] }},"prod_price_forecast":{{((state_attr("sensor.nordpool_kwh_se1_sek_3_10_025", "raw_today") | map(attribute="value") | list  + state_attr("sensor.nordpool_kwh_se1_sek_3_10_025", "raw_tomorrow") | map(attribute="value") | list))[now().hour:][:24]}},"maximum_power_from_grid":1000}' http://localhost:5000/action/dayahead-optim &&
+    sleep 15 &&
+    max_value=$(jq '[.forecasts[].p_grid_forecast | tonumber] | max' <<< '{{ state_attr("sensor.p_grid_forecast", "forecasts") | tojson }}') &&
+    curl -X POST -H "Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI4YTBjZDc1YWEzN2I0ZDJhODdlNGNjY2YyYzZjN2Y5MSIsImlhdCI6MTc0MTcwNTkyNSwiZXhwIjoyMDU3MDY1OTI1fQ.cfYQTRnybld6DFbnV2cs31IIH4Tjkawb-y_hUAiKkVQ" -H "Content-Type: application/json" -d '{"state": "'"$max_value"'"}' http://homeassistant.local:8123/api/states/input_number.house_daily_maxw
