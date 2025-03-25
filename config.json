@@ -59,7 +59,25 @@
         ],
         "period_hp_2": [
             {
-                "start": "17:24"
+                "start": "17:00"
+            },
+            {
+                "end": "20:24"
+            }
+        ]
+    },
+    "vehicle_hours_unavailable": {
+        "period_hp_a": [
+            {
+                "start": "02:54"
+            },
+            {
+                "end": "15:24"
+            }
+        ],
+        "period_hp_b": [
+            {
+                "start": "17:00"
             },
             {
                 "end": "20:24"

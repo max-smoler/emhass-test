@@ -428,5 +428,123 @@
       "input": "float",
       "default_value": 0.6
     }
+  },
+  "Vehicle-to-grid": {
+    "set_use_v2g": {
+      "friendly_name": "Enable V2G",
+      "Description": "Set to True if we should consider an vehicle energy storage source.",
+      "input": "boolean",
+      "default_value": false
+    },
+    "vehicle_hours_unavailable": {
+      "friendly_name": "List peak hour periods",
+      "Description": "A list of peak hour periods for load consumption from the grid. This is useful if you have a contract with peak and non-peak hours.",
+      "input": "array.time",
+      "default_value": {
+        "period_hp_template": [{"start": "07:00"},{"end": "17:00"}]
+      }
+    },
+    "vehicle_use_charge_min": {
+      "friendly_name": "Minimum charge percentage of the EV when planned for use",
+      "Description": "The minimum percentage of charge the EV is allowed to have before a scheduled use window.",
+      "input": "float",
+      "default_value": 0.5
+    },
+    "v2g_set_nocharge_from_grid": {
+      "friendly_name": "Forbid charging battery from grid",
+      "Description": "Set this to true if you want to forbid charging the battery from the grid. The battery will only be charged from excess PV",
+      "input": "boolean",
+      "default_value": false
+    },
+    "v2g_set_nodischarge_to_grid": {
+      "friendly_name": "Forbid battery discharge to the grid",
+      "Description": "Set this to true if you want to forbid discharging battery power to the grid.",
+      "input": "boolean",
+      "default_value": true
+    },
+    "v2g_set_battery_dynamic": {
+      "friendly_name": "Set Battery dynamic (dis)charge power limiting",
+      "Description": "Set a power dynamic limiting condition to the battery power. This is an additional constraint on the battery dynamic in power per unit of time (timestep), which allows you to set a percentage of the battery’s nominal full power as the maximum power allowed for (dis)charge.",
+      "input": "boolean",
+      "default_value": false
+    },
+    "v2g_battery_dynamic_max": {
+      "friendly_name": "Maximum percentage of battery discharge per timestep",
+      "Description": "The maximum positive (for discharge) battery power dynamic. This is the allowed power variation (in percentage) of battery maximum power per unit of timestep",
+      "input": "float",
+      "default_value": 0.9,
+      "requires": {
+        "set_battery_dynamic": true
+      }
+    },
+    "v2g_battery_dynamic_min": {
+      "friendly_name": "Maximum percentage of battery charge per timestep",
+      "Description": "The maximum negative (for charge) battery power dynamic. This is the allowed power variation (in percentage) of battery maximum power per timestep.",
+      "input": "float",
+      "default_value": -0.9,
+      "requires": {
+        "set_battery_dynamic": true
+      }
+    },
+    "v2g_weight_battery_discharge": {
+      "friendly_name": "Add cost weight for battery discharge",
+      "Description": "An additional weight (currency/ kWh) applied in the cost function to battery usage for discharging",
+      "input": "float",
+      "default_value": 0.0
+    },
+    "v2g_weight_battery_charge": {
+      "friendly_name": "Add cost weight for battery charge",
+      "Description": "An additional weight (currency/ kWh) applied in the cost function to battery usage for charging",
+      "input": "float",
+      "default_value": 0.0
+    },
+    "v2g_battery_discharge_power_max": {
+      "friendly_name": "Max battery discharge power",
+      "Description": "The maximum discharge power in Watts",
+      "input": "int",
+      "default_value": 1000
+    },
+    "v2g_battery_charge_power_max": {
+      "friendly_name": "Max battery charge power",
+      "Description": "The maximum charge power in Watts",
+      "input": "int",
+      "default_value": 1000
+    },
+    "v2g_battery_discharge_efficiency": {
+      "friendly_name": "Battery discharge efficiency",
+      "Description": "The discharge efficiency. (percentage/100)",
+      "input": "float",
+      "default_value": 0.95
+    },
+    "v2g_battery_charge_efficiency": {
+      "friendly_name": "Battery charge efficiency",
+      "Description": "The charge efficiency. (percentage/100)",
+      "input": "float",
+      "default_value": 0.95
+    },
+    "v2g_battery_nominal_energy_capacity": {
+      "friendly_name": "Battery total capacity",
+      "Description": "The total capacity of the battery stack in Wh",
+      "input": "int",
+      "default_value": 5000
+    },
+    "v2g_battery_minimum_state_of_charge": {
+      "friendly_name": "Minimum Battery charge percentage",
+      "Description": "The minimum allowable battery state of charge. (percentage/100)",
+      "input": "float",
+      "default_value": 0.3
+    },
+    "v2g_battery_maximum_state_of_charge": {
+      "friendly_name": "Maximum Battery charge percentage",
+      "Description": "The maximum allowable battery state of charge. (percentage/100)",
+      "input": "float",
+      "default_value": 0.9
+    },
+    "v2g_battery_target_state_of_charge": {
+      "friendly_name": "Battery desired percentage after optimization",
+      "Description": "The desired battery state of charge at the end of each optimization cycle. (percentage/100)",
+      "input": "float",
+      "default_value": 0.6
+    }
   }
 }
