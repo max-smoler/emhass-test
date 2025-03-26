@@ -113,5 +113,39 @@
   "battery_nominal_energy_capacity": 5000,
   "battery_minimum_state_of_charge": 0.3,
   "battery_maximum_state_of_charge": 0.9,
-  "battery_target_state_of_charge": 0.6
+  "battery_target_state_of_charge": 0.6,
+  "set_use_v2g": true,
+    "v2g_set_battery_dynamic": false,
+    "v2g_battery_dynamic_max": 0.9,
+    "v2g_battery_dynamic_min": -0.9,
+    "v2g_weight_battery_discharge": 0,
+    "v2g_weight_battery_charge": 0,
+    "vehicle_hours_away": {
+        "period_hp_1": [
+            {
+                "start": "08:00"
+            },
+            {
+                "end": "16:00"
+            }
+        ],
+        "period_hp_2": [
+            {
+                "start": "18:00"
+            },
+            {
+                "end": "18:30"
+            }
+        ]
+    },
+    "vehicle_use_charge_min": 0.5,
+    "vehicle_leave_subtract": 0.1,
+    "v2g_battery_discharge_power_max": 1000,
+    "v2g_battery_charge_power_max": 1000,
+    "v2g_battery_discharge_efficiency": 0.95,
+    "v2g_battery_charge_efficiency": 0.95,
+    "v2g_battery_nominal_energy_capacity": 5000,
+    "v2g_battery_minimum_state_of_charge": 0.3,
+    "v2g_battery_maximum_state_of_charge": 0.9,
+    "v2g_battery_target_state_of_charge": 0.6
 }

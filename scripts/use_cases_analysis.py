@@ -251,7 +251,7 @@ if __name__ == "__main__":
         df_input_data_dayahead, P_PV_forecast, P_load_forecast
     )
     fig_res_dah = opt_res_dah[
-        ["P_deferrable0", "P_deferrable1", "P_grid", "P_batt"]
+        ["P_deferrable0", "P_deferrable1", "P_grid", "P_batt", "P_v2g"]
     ].plot()
     fig_res_dah.layout.template = template
     fig_res_dah.update_yaxes(title_text=y_axis_title)

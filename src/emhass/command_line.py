@@ -1295,6 +1295,43 @@ def publish_data(
                 dont_post=dont_post,
             )
             cols_published = cols_published + ["SOC_opt"]
+    # Publish v2g-battery power
+    if input_data_dict["opt"].optim_conf["set_use_v2g"]:
+        if "P_v2g" not in opt_res_latest.columns:
+            logger.error(
+                "P_v2g was not found in results DataFrame. Optimization task may need to be relaunched or it did not converge to a solution.",
+            )
+        else:
+            v2g_custom_batt_forecast_id = params["passed_data"]["v2g_custom_batt_forecast_id"]
+            input_data_dict["rh"].post_data(
+                opt_res_latest["P_v2g"],
+                idx_closest,
+                custom_batt_forecast_id["entity_id"],
+                "power",
+                custom_batt_forecast_id["unit_of_measurement"],
+                custom_batt_forecast_id["friendly_name"],
+                type_var="batt",
+                publish_prefix=publish_prefix,
+                save_entities=entity_save,
+                dont_post=dont_post,
+            )
+            cols_published = cols_published + ["P_v2g"]
+            v2g_custom_batt_soc_forecast_id = params["passed_data"][
+                "v2g_custom_batt_soc_forecast_id"
+            ]
+            input_data_dict["rh"].post_data(
+                opt_res_latest["v2g_SOC_opt"] * 100,
+                idx_closest,
+                v2g_custom_batt_soc_forecast_id["entity_id"],
+                "v2g_battery",
+                v2g_custom_batt_soc_forecast_id["unit_of_measurement"],
+                v2g_custom_batt_soc_forecast_id["friendly_name"],
+                type_var="SOC",
+                publish_prefix=publish_prefix,
+                save_entities=entity_save,
+                dont_post=dont_post,
+            )
+            cols_published = cols_published + ["v2g_SOC_opt"]
     # Publish grid power
     custom_grid_forecast_id = params["passed_data"]["custom_grid_forecast_id"]
     input_data_dict["rh"].post_data(

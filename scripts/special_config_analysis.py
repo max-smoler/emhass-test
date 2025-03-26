@@ -337,8 +337,13 @@ if __name__ == "__main__":
     opt.optim_conf["weight_battery_discharge"] = 0.0
     opt.optim_conf["weight_battery_charge"] = 0.0
     opt.optim_conf["battery_dynamic_max"] = 0.9
+    opt.optim_conf["v2g_weight_battery_discharge"] = 0.0
+    opt.optim_conf["v2g_weight_battery_charge"] = 0.0
+    opt.optim_conf["v2g_battery_dynamic_max"] = 0.9
     opt.optim_conf["set_nocharge_from_grid"] = False
     opt.optim_conf["set_nodischarge_to_grid"] = False
+    opt.optim_conf["v2g_set_nocharge_from_grid"] = False
+    opt.optim_conf["v2g_set_nodischarge_to_grid"] = False
     opt.optim_conf["set_total_pv_sell"] = False
 
     opt_res_dayahead = opt.perform_naive_mpc_optim(
@@ -350,7 +355,7 @@ if __name__ == "__main__":
         soc_final=soc_final,
         def_total_hours=operating_hours_of_each_deferrable_load,
     )
-    fig_res_mpc = opt_res_dayahead[["P_batt", "P_grid"]].plot()
+    fig_res_mpc = opt_res_dayahead[["P_batt", "P_v2g", "P_grid"]].plot()
     fig_res_mpc.layout.template = template
     fig_res_mpc.update_yaxes(title_text=y_axis_title)
     fig_res_mpc.update_xaxes(title_text="Time")

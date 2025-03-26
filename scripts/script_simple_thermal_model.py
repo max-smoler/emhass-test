@@ -197,6 +197,14 @@ if __name__ == "__main__":
         vars_to_plot = vars_to_plot + ["P_PV_curtailment"]
     if optim_conf["set_use_battery"]:
         vars_to_plot = vars_to_plot + ["P_batt"] + ["SOC_opt"]
+
+    if plant_conf["v2g_inverter_is_hybrid"]:
+        vars_to_plot = vars_to_plot + ["v2g_P_hybrid_inverter"]
+    if plant_conf["v2g_compute_curtailment"]:
+        vars_to_plot = vars_to_plot + ["v2g_P_PV_curtailment"]
+    if optim_conf["v2g_set_use_battery"]:
+        vars_to_plot = vars_to_plot + ["P_v2g"] + ["v2g_SOC_opt"]
+
     fig_res_dah = opt_res_dayahead[
         vars_to_plot
     ].plot()  # 'P_def_start_0', 'P_def_start_1', 'P_def_bin2_0', 'P_def_bin2_1'

@@ -316,6 +316,22 @@ def treat_runtimeparams(
             "unit_of_measurement": "%",
             "friendly_name": "Battery SOC Forecast",
         },
+        "sensor.p_v2g_forecast": {
+            "name": "P_v2g",
+            "device_class": "power",
+            "unit_of_measurement": "W",
+            "friendly_name": "EV Power Forecast",
+            "type_var": "batt",
+            "optimization_time_step": 60
+        },
+        "sensor.soc_v2g_batt_forecast": {
+            "name": "v2g_SOC_opt",
+            "device_class": "battery",
+            "unit_of_measurement": "%",
+            "friendly_name": "EV SOC Forecast",
+            "type_var": "SOC",
+            "optimization_time_step": 60
+        },
         "custom_grid_forecast_id": {
             "entity_id": "sensor.p_grid_forecast",
             "device_class": "power",
@@ -483,6 +499,17 @@ def treat_runtimeparams(
                 logger.warning(f"Passed soc_init={soc_init} is greater than soc_max={params['plant_conf']['battery_maximum_state_of_charge']}, setting soc_init=soc_max")
                 soc_init = params["plant_conf"]["battery_maximum_state_of_charge"]
             params["passed_data"]["soc_init"] = soc_init
+            if "v2g_soc_init" not in runtimeparams.keys():
+                v2g_soc_init = params["plant_conf"]["v2g_battery_target_state_of_charge"]
+            else:
+                v2g_soc_init = runtimeparams["v2g_soc_init"]
+            if v2g_soc_init < params["plant_conf"]["v2g_battery_minimum_state_of_charge"]:
+                logger.warning(f"Passed v2g_soc_init={v2g_soc_init} is lower than v2g_soc_min={params['plant_conf']['v2g_battery_minimum_state_of_charge']}, setting v2g_soc_init=v2g_soc_min")
+                v2g_soc_init = params["plant_conf"]["v2g_battery_minimum_state_of_charge"]
+            if v2g_soc_init > params["plant_conf"]["v2g_battery_maximum_state_of_charge"]:
+                logger.warning(f"Passed v2g_soc_init={v2g_soc_init} is greater than v2g_soc_max={params['plant_conf']['v2g_battery_maximum_state_of_charge']}, setting v2g_soc_init=v2g_soc_max")
+                v2g_soc_init = params["plant_conf"]["v2g_battery_maximum_state_of_charge"]
+            params["passed_data"]["v2g_soc_init"] = v2g_soc_init
             if "soc_final" not in runtimeparams.keys():
                 soc_final = params["plant_conf"]["battery_target_state_of_charge"]
             else:
@@ -494,6 +521,17 @@ def treat_runtimeparams(
                 logger.warning(f"Passed soc_final={soc_final} is greater than soc_max={params['plant_conf']['battery_maximum_state_of_charge']}, setting soc_final=soc_max")
                 soc_final = params["plant_conf"]["battery_maximum_state_of_charge"]
             params["passed_data"]["soc_final"] = soc_final
+            if "v2g_soc_final" not in runtimeparams.keys():
+                v2g_soc_final = params["plant_conf"]["v2g_battery_target_state_of_charge"]
+            else:
+                v2g_soc_final = runtimeparams["v2g_soc_final"]
+            if v2g_soc_final < params["plant_conf"]["v2g_battery_minimum_state_of_charge"]:
+                logger.warning(f"Passed v2g_soc_final={v2g_soc_final} is lower than v2g_soc_min={params['plant_conf']['v2g_battery_minimum_state_of_charge']}, setting v2g_soc_final=v2g_soc_min")
+                v2g_soc_final = params["plant_conf"]["v2g_battery_minimum_state_of_charge"]
+            if v2g_soc_final > params["plant_conf"]["v2g_battery_maximum_state_of_charge"]:
+                logger.warning(f"Passed v2g_soc_final={v2g_soc_final} is greater than v2g_soc_max={params['plant_conf']['v2g_battery_maximum_state_of_charge']}, setting v2g_soc_final=v2g_soc_max")
+                v2g_soc_final = params["plant_conf"]["v2g_battery_maximum_state_of_charge"]
+            params["passed_data"]["v2g_soc_final"] = v2g_soc_final
             if "operating_timesteps_of_each_deferrable_load" in runtimeparams.keys():
                 params["passed_data"]["operating_timesteps_of_each_deferrable_load"] = (
                     runtimeparams["operating_timesteps_of_each_deferrable_load"]
@@ -544,6 +582,8 @@ def treat_runtimeparams(
             params["passed_data"]["prediction_horizon"] = None
             params["passed_data"]["soc_init"] = None
             params["passed_data"]["soc_final"] = None
+            params["passed_data"]["v2g_soc_init"] = None
+            params["passed_data"]["v2g_soc_final"] = None
 
         # Treat passed forecast data lists
         list_forecast_key = [
@@ -945,11 +985,27 @@ def get_injection_dict(df: pd.DataFrame, plot_size: Optional[int] = 1366) -> dic
         color_discrete_sequence=colors,
     )
     fig_2.update_layout(xaxis_title="Timestamp", yaxis_title="System costs (currency)")
+    if "v2g_SOC_opt" in df.columns.to_list():
+        fig_3 = px.line(
+            df["v2g_SOC_opt"],
+            title="EV state of charge schedule after optimization results",
+            template="presentation",
+            line_shape="hv",
+            color_discrete_sequence=colors,
+        )
+        fig_3.update_layout(xaxis_title="Timestamp", yaxis_title="Battery SOC (%)")
+    cols_cost = [i for i in df.columns.to_list() if "cost_" in i or "unit_" in i]
+    n_colors = len(cols_cost)
+    colors = px.colors.sample_colorscale(
+        "jet", [n / (n_colors - 1) for n in range(n_colors)]
+    )
     # Get full path to image
     image_path_0 = fig_0.to_html(full_html=False, default_width="75%")
     if "SOC_opt" in df.columns.to_list():
         image_path_1 = fig_1.to_html(full_html=False, default_width="75%")
     image_path_2 = fig_2.to_html(full_html=False, default_width="75%")
+    if "v2g_SOC_opt" in df.columns.to_list():
+        image_path_3 = fig_3.to_html(full_html=False, default_width="75%")
     # The tables
     table1 = df.reset_index().to_html(classes="mystyle", index=False)
     cost_cols = [i for i in df.columns if "cost_" in i]
@@ -968,6 +1024,8 @@ def get_injection_dict(df: pd.DataFrame, plot_size: Optional[int] = 1366) -> dic
     if "SOC_opt" in df.columns.to_list():
         injection_dict["figure_1"] = image_path_1
     injection_dict["figure_2"] = image_path_2
+    if "v2g_SOC_opt" in df.columns.to_list():
+        injection_dict["figure_3"] = image_path_3
     injection_dict["subsubtitle1"] = "<h4>Last run optimization results table</h4>"
     injection_dict["table1"] = table1
     injection_dict["subsubtitle2"] = (
@@ -1629,6 +1687,8 @@ def build_params(
         "prediction_horizon": None,
         "soc_init": None,
         "soc_final": None,
+        "v2g_soc_init": None,
+        "v2g_soc_final": None,
         "operating_hours_of_each_deferrable_load": None,
         "start_timesteps_of_each_deferrable_load": None,
         "end_timesteps_of_each_deferrable_load": None,

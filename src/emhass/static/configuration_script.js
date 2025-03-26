@@ -499,6 +499,14 @@ function minusElements(param) {
       param_input_list[param_input_list.length - 1].remove();
       brs[brs.length - 1].remove();
     }
+  if (param == "vehicle_hours_away"){
+    if (param_input_list.length > 10) {
+      let brs = document.getElementById(param).getElementsByTagName("br");
+      param_input_list[param_input_list.length - 1].remove();
+      param_input_list[param_input_list.length - 1].remove();
+      brs[brs.length - 1].remove();
+    }
+  }
   } else if (param_input_list.length > 1) {
     param_input.remove();
   }
@@ -560,6 +568,19 @@ function headerElement(element, param_definitions, config) {
         param_container.innerHTML = "";
       }
       break;
+    
+    //if set_use_v2g, add or remove battery section (inc. params)
+    case "set_use_v2g":
+      if (element.checked) {
+        param_container.innerHTML = "";
+        buildParamContainers("Vehicle-to-grid", param_definitions["Vehicle-to-grid"], config, [
+          "set_use_v2g",
+        ]);
+        element.checked = true;
+      } else {
+        param_container.innerHTML = "";
+      }
+      break; 
 
     //if set_use_pv, add or remove PV section (inc. related params)
     case "set_use_pv":
