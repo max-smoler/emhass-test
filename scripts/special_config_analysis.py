@@ -196,6 +196,8 @@ if __name__ == "__main__":
     prediction_horizon = 16
     soc_init = 0.98
     soc_final = 0.3
+    v2g_soc_init = 0.98
+    v2g_soc_final = 0.3
     operating_hours_of_each_deferrable_load = [0]
     alpha = 1
     beta = 0
@@ -208,6 +210,8 @@ if __name__ == "__main__":
         "prediction_horizon": prediction_horizon,
         "soc_init": soc_init,
         "soc_final": soc_final,
+        "v2g_soc_init": v2g_soc_init,
+        "v2g_soc_final": v2g_soc_final,
         "operating_hours_of_each_deferrable_load": operating_hours_of_each_deferrable_load,
         "alpha": alpha,
         "beta": beta,

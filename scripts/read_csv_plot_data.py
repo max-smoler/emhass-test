@@ -64,6 +64,7 @@ if __name__ == "__main__":
     ]
     data = pd.DataFrame(index=data_cost.index, columns=cols_to_plot)
     data["P_PV"] = data_cost["P_PV"]
+    data["P_v2g"] = data_cost["P_v2g"]
     data["P_Load"] = data_cost["P_Load"]
     data["P_def_sum_cost"] = (
         data_cost["P_deferrable0"] + data_cost["P_deferrable1"]

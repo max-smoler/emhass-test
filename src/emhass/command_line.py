@@ -1306,10 +1306,10 @@ def publish_data(
             input_data_dict["rh"].post_data(
                 opt_res_latest["P_v2g"],
                 idx_closest,
-                custom_batt_forecast_id["entity_id"],
+                v2g_custom_batt_forecast_id["entity_id"],
                 "power",
-                custom_batt_forecast_id["unit_of_measurement"],
-                custom_batt_forecast_id["friendly_name"],
+                v2g_custom_batt_forecast_id["unit_of_measurement"],
+                v2g_custom_batt_forecast_id["friendly_name"],
                 type_var="batt",
                 publish_prefix=publish_prefix,
                 save_entities=entity_save,

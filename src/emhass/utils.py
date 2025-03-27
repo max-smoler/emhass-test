@@ -316,6 +316,18 @@ def treat_runtimeparams(
             "unit_of_measurement": "%",
             "friendly_name": "Battery SOC Forecast",
         },
+        "v2g_custom_batt_forecast_id": {
+            "entity_id": "sensor.p_v2g_forecast",
+            "device_class": "power",
+            "unit_of_measurement": "W",
+            "friendly_name": "EV Power Forecast",
+        },
+        "v2g_custom_batt_soc_forecast_id": {
+            "entity_id": "sensor.v2g_soc_batt_forecast",
+            "device_class": "battery",
+            "unit_of_measurement": "%",
+            "friendly_name": "EV SOC Forecast",
+        },
         "sensor.p_v2g_forecast": {
             "name": "P_v2g",
             "device_class": "power",
@@ -324,7 +336,7 @@ def treat_runtimeparams(
             "type_var": "batt",
             "optimization_time_step": 60
         },
-        "sensor.soc_v2g_batt_forecast": {
+        "sensor.v2g_soc_batt_forecast": {
             "name": "v2g_SOC_opt",
             "device_class": "battery",
             "unit_of_measurement": "%",
@@ -849,6 +861,14 @@ def treat_runtimeparams(
         if "custom_batt_soc_forecast_id" in runtimeparams.keys():
             params["passed_data"]["custom_batt_soc_forecast_id"] = runtimeparams[
                 "custom_batt_soc_forecast_id"
+            ]
+        if "v2g_custom_batt_forecast_id" in runtimeparams.keys():
+            params["passed_data"]["v2g_custom_batt_forecast_id"] = runtimeparams[
+                "v2g_custom_batt_forecast_id"
+            ]
+        if "v2g_custom_batt_soc_forecast_id" in runtimeparams.keys():
+            params["passed_data"]["v2g_custom_batt_soc_forecast_id"] = runtimeparams[
+                "v2g_custom_batt_soc_forecast_id"
             ]
         if "custom_grid_forecast_id" in runtimeparams.keys():
             params["passed_data"]["custom_grid_forecast_id"] = runtimeparams[
