@@ -180,6 +180,16 @@
       ],
       "default_value": "hp_hc_periods"
     },
+    "power_tariff_company": {
+      "friendly_name": "Power Tariff Company",
+      "Description": "Define the company that provides your electricity.",
+      "input": "select",
+      "select_options": [
+        "goteborg_energi",
+        "elevio"
+      ],
+      "default_value": "goteborg_energi"
+    },
     "load_peak_hour_periods": {
       "friendly_name": "List peak hour periods",
       "Description": "A list of peak hour periods for load consumption from the grid. This is useful if you have a contract with peak and non-peak hours.",
