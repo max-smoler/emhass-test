@@ -562,6 +562,13 @@ def treat_runtimeparams(
                 "optim_conf"
             ].get("end_timesteps_of_each_deferrable_load", None)
 
+            params["passed_data"]["start_timesteps_of_each_available_window"] = params[
+                "optim_conf"
+            ].get("start_timesteps_of_each_available_window", None)
+            params["passed_data"]["end_timesteps_of_each_available_window"] = params[
+                "optim_conf"
+            ].get("end_timesteps_of_each_available_window", None)
+
             forecast_dates = copy.deepcopy(forecast_dates)[0:prediction_horizon]
 
             # Load the default config
@@ -1640,6 +1647,35 @@ def build_params(
         )
     else:
         logger.warning("unable to obtain parameter: number_of_deferrable_loads")
+    # --||-- för available windows
+    if params["optim_conf"].get("number_of_available_windows", None) is not None:
+        num_avb_win = params["optim_conf"]["number_of_available_windows"]
+        params["optim_conf"]["start_timesteps_of_each_available_window"] = (
+            check_available_windows(
+                num_avb_win,
+                params["optim_conf"],
+                0,
+                "start_timesteps_of_each_available_window",
+                logger,
+            )
+        )
+        params["optim_conf"]["end_timesteps_of_each_available_window"] = check_available_windows(
+            num_avb_win,
+            params["optim_conf"],
+            0,
+            "end_timesteps_of_each_available_window",
+            logger,
+        )
+        params["optim_conf"]["vehicle_leave_subtract"] = check_available_windows(
+            num_avb_win,
+            params["optim_conf"],
+            0.0,
+            "vehicle_leave_subtract",
+            logger,
+        )
+    else:
+        logger.warning("unable to obtain parameter: number_of_available_windows")
+    
     # historic_days_to_retrieve should be no less then 2
     if params["retrieve_hass_conf"].get("historic_days_to_retrieve", None) is not None:
         if params["retrieve_hass_conf"]["historic_days_to_retrieve"] < 2:
@@ -1712,6 +1748,8 @@ def build_params(
         "operating_hours_of_each_deferrable_load": None,
         "start_timesteps_of_each_deferrable_load": None,
         "end_timesteps_of_each_deferrable_load": None,
+        "start_timesteps_of_each_available_window": None,
+        "end_timesteps_of_each_available_window": None,
         "alpha": None,
         "beta": None,
     }
@@ -1754,6 +1792,41 @@ def check_def_loads(
             parameter[parameter_name].append(default)
     return parameter[parameter_name]
 
+def check_available_windows(
+    num_avb_win: int, parameter: list[dict], default, parameter_name: str, logger
+):
+    """
+    Check parameter lists with available windows number, if they do not match, enlarge to fit.
+
+    :param num_def_loads: Total number deferrable loads
+    :type num_def_loads: int
+    :param parameter: parameter config dict containing paramater
+    :type: list[dict]
+    :param default: default value for parameter to pad missing
+    :type: obj
+    :param parameter_name: name of parameter
+    :type logger: str
+    :param logger: The logger object
+    :type logger: logging.Logger
+    return: parameter list
+    :rtype: list[dict]
+
+    """
+    if (
+        parameter.get(parameter_name, None) is not None
+        and parameter_name != "vehicle_leave_subtract"
+        and type(parameter[parameter_name]) is list
+        and num_avb_win > len(parameter[parameter_name])
+    ):
+        logger.warning(
+            parameter_name
+            + " does not match number in number_of_available_windows, adding default values ("
+            + str(default)
+            + ") to parameter"
+        )
+        for x in range(len(parameter[parameter_name]), num_avb_win):
+            parameter[parameter_name].append(default)
+    return parameter[parameter_name]
 
 def get_days_list(days_to_retrieve: int) -> pd.date_range:
     """

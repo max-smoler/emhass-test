@@ -446,13 +446,23 @@
       "input": "boolean",
       "default_value": false
     },
-    "vehicle_hours_away": {
-      "friendly_name": "EV unavailable windows",
-      "Description": "A list of windows in time during the day when the EV won't be available as a battery buffer for the grid.",
-      "input": "array.time",
-      "default_value": {
-        "period_hp_template": [{"start": "07:00"},{"end": "17:00"}]
-      }
+    "number_of_available_windows": {
+      "friendly_name": "Number of available windows",
+      "Description": "Define the number of windows in the day to consider. Defaults to 1. The windows have to be stated in chronological order.",
+      "input": "int",
+      "default_value": 1
+    },
+    "start_timesteps_of_each_available_window": {
+      "friendly_name": "Window start timestamp",
+      "Description": "The timestep as from which the EV is allowed to operate. If you specify a value of 0 (or negative), the window will be optimized as from the beginning of the complete prediction horizon window.",
+      "input": "array.int",
+      "default_value": 0
+    },
+    "end_timesteps_of_each_available_window": {
+      "friendly_name": "Window end timestamp",
+      "Description": "The timestep as from which the EV is allowed to operate. If you specify a value of 0 (or negative), the window will be optimized as from the beginning of the complete prediction horizon window.",
+      "input": "array.int",
+      "default_value": 0
     },
     "vehicle_use_charge_min": {
       "friendly_name": "Minimum charge percentage of the EV when planned for use",
@@ -463,7 +473,7 @@
     "vehicle_leave_subtract": {
       "friendly_name": "The charge percentage used in a trip",
       "Description": "The charge percentage to be subtracted from the usable battery load after an away window.",
-      "input": "float",
+      "input": "array.float",
       "default_value": 0.1
     },
     "v2g_set_nocharge_from_grid": {

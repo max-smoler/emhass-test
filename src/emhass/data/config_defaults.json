@@ -120,26 +120,17 @@
     "v2g_battery_dynamic_min": -0.9,
     "v2g_weight_battery_discharge": 0,
     "v2g_weight_battery_charge": 0,
-    "vehicle_hours_away": {
-        "period_hp_1": [
-            {
-                "start": "08:00"
-            },
-            {
-                "end": "16:00"
-            }
-        ],
-        "period_hp_2": [
-            {
-                "start": "18:00"
-            },
-            {
-                "end": "18:30"
-            }
-        ]
-    },
+    "start_timesteps_of_each_available_window": [
+        0
+    ],
+    "end_timesteps_of_each_available_window": [
+        0
+    ],
+    "number_of_available_windows": 1,
     "vehicle_use_charge_min": 0.5,
-    "vehicle_leave_subtract": 0.1,
+    "vehicle_leave_subtract": [
+      0.1
+    ],
     "v2g_battery_discharge_power_max": 1000,
     "v2g_battery_charge_power_max": 1000,
     "v2g_battery_discharge_efficiency": 0.95,

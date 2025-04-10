@@ -121,7 +121,7 @@ function loadConfigurationListView(param_definitions, config, list_html) {
   }
 
   //list parameters used in the section headers
-  let header_input_list = ["set_use_v2g", "set_use_battery", "set_use_pv", "number_of_deferrable_loads"];
+  let header_input_list = ["set_use_v2g", "number_of_available_windows", "set_use_battery", "set_use_pv", "number_of_deferrable_loads"];
 
   //get the main container and append list template html
   document.getElementById("configuration-container").innerHTML = list_html;
@@ -615,6 +615,36 @@ function headerElement(element, param_definitions, config) {
           for (const param of param_list) {
             //append element, do not pass config to obtain default parameter from definitions file
             plusElements(param.id, param_definitions, "Deferrable Loads", {});
+          }
+        }
+      }
+      //subtract elements based how many elements its over
+      if (difference < 0) {
+        for (let i = difference; i <= -1; i++) {
+          for (const param of param_list) {
+            minusElements(param.id);
+          }
+        }
+      }
+      case "number_of_available_windows":
+      //get a list of param in section
+      param_list = param_container.getElementsByClassName("param");
+      if (param_list.length <= 0) {
+        console.log(
+          "There has been an issue counting the amount of params in number_of_available_windows"
+        );
+        return 1;
+      }
+      //calculate how much off the fist parameters input elements amount to is, compering to the number_of_deferrable_loads value
+      difference =
+        parseInt(element.value) -
+        param_container.firstElementChild.querySelectorAll("input").length;
+      //add elements based on how many elements are missing
+      if (difference > 0) {
+        for (let i = difference; i >= 1; i--) {
+          for (const param of param_list) {
+            //append element, do not pass config to obtain default parameter from definitions file
+            plusElements(param.id, param_definitions, "Vehicle-to-grid", {});
           }
         }
       }

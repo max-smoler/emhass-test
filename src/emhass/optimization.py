@@ -124,6 +124,10 @@ class Optimization:
         def_total_timestep: Optional[list] = None,
         def_start_timestep: Optional[list] = None,
         def_end_timestep: Optional[list] = None,
+        window_start_timestep: Optional[list] = None,
+        window_end_timestep: Optional[list] = None,
+        vehicle_leave_subtract: Optional[list] = None,
+        vehicle_use_charge_min: Optional[float] = None,
         debug: Optional[bool] = False,
     ) -> pd.DataFrame:
         r"""
@@ -206,6 +210,19 @@ class Optimization:
             def_end_timestep = self.optim_conf["end_timesteps_of_each_deferrable_load"]
         type_self_conso = "bigm"  # maxmin
 
+        if window_start_timestep is None:
+            window_start_timestep = self.optim_conf[
+                "start_timesteps_of_each_available_window"
+            ]
+        if window_end_timestep is None:
+            window_end_timestep = self.optim_conf["end_timesteps_of_each_available_window"]
+
+        if vehicle_leave_subtract is None:
+            vehicle_leave_subtract = self.optim_conf["vehicle_leave_subtract"]
+
+        if vehicle_use_charge_min is None:
+            vehicle_use_charge_min = self.plant_conf["vehicle_use_charge_min"]
+
         #### The LP problem using Pulp ####
         opt_model = plp.LpProblem("LP_Model", plp.LpMaximize)
 
@@ -272,6 +289,9 @@ class Optimization:
                     for i in set_I
                 }
             )
+
+        # Från hit
+
         P_def_start = []
         P_def_bin2 = []
         for k in range(self.optim_conf["number_of_deferrable_loads"]):
@@ -804,7 +824,8 @@ class Optimization:
                 )
             )
             if def_total_timestep and def_total_timestep[k] > 0:
-                def_start, def_end, warning = Optimization.validate_def_timewindow(
+                def_start, def_end, warning = Optimization.validate_timewindow(
+                    "dl",
                     def_start_timestep[k],
                     def_end_timestep[k],
                     ceil(
@@ -814,7 +835,8 @@ class Optimization:
                     n,
                 )
             else:
-                def_start, def_end, warning = Optimization.validate_def_timewindow(
+                def_start, def_end, warning = Optimization.validate_timewindow(
+                    "dl",
                     def_start_timestep[k],
                     def_end_timestep[k],
                     ceil(def_total_hours[k] / self.timeStep),
@@ -985,27 +1007,6 @@ class Optimization:
                         for i in set_I
                     }
                 )
-
-            # Treat the number of starts for a deferrable load (old method, kept here just in case)
-            # if self.optim_conf['set_deferrable_load_single_constant'][k]:
-            #     constraints.update({"constraint_pdef{}_start1_{}".format(k, i) :
-            #         plp.LpConstraint(
-            #             e=P_deferrable[k][i] - P_def_bin2[k][i]*M,
-            #             sense=plp.LpConstraintLE,
-            #             rhs=0)
-            #         for i in set_I})
-            #     constraints.update({"constraint_pdef{}_start2_{}".format(k, i):
-            #         plp.LpConstraint(
-            #             e=P_def_start[k][i] - P_def_bin2[k][i] + (P_def_bin2[k][i-1] if i-1 >= 0 else 0),
-            #             sense=plp.LpConstraintGE,
-            #             rhs=0)
-            #         for i in set_I})
-            #     constraints.update({"constraint_pdef{}_start3".format(k) :
-            #     plp.LpConstraint(
-            #         e = plp.lpSum(P_def_start[k][i] for i in set_I),
-            #         sense = plp.LpConstraintEQ,
-            #         rhs = 1)
-            #     })
 
         # The battery constraints
         if self.optim_conf["set_use_battery"]:
@@ -1181,6 +1182,172 @@ class Optimization:
 
         # The v2g battery constraints
         if self.optim_conf["set_use_v2g"]:
+            # Treat window contraints for v2g battery
+            v2g_SOC_opt_pentalty = np.zeros(n) # Used later to subtract SOC for usage windows
+            for k in range (self.optim_conf["number_of_available_windows"]):
+
+                # Validate and define EV available window
+                win_end_prev = 0
+                if k != 0:
+                    win_end_prev = win_end
+
+                if k < self.optim_conf["number_of_available_windows"] - 1:
+                    win_start_next = window_start_timestep[k + 1] # The next window hasn't been validated, but will be so it should be fine
+
+                win_start, win_end, warning = Optimization.validate_timewindow(
+                        "win",
+                        window_start_timestep[k],
+                        window_end_timestep[k],
+                        ceil((window_end_timestep[k]-window_start_timestep[k]) / self.timeStep),
+                        n,
+                 )
+
+                
+                # Minimum charge battery for use constraint
+                constraints.update(
+                    {
+                        "v2g_constraint_usesocmin_{}".format(k): plp.LpConstraint(
+                            e=plp.lpSum(
+                                v2g_P_sto_pos[i]
+                                * (1 / self.plant_conf["v2g_battery_discharge_efficiency"])
+                                + self.plant_conf["v2g_battery_charge_efficiency"]
+                                * v2g_P_sto_neg[i]
+                                + v2g_SOC_opt_pentalty[i] * self.plant_conf["v2g_battery_nominal_energy_capacity"]
+                                / self.timeStep 
+                                for i in set_I[0:win_start]
+                            ),
+                            sense=plp.LpConstraintLE,
+                            rhs=(v2g_soc_init - vehicle_use_charge_min)
+                            * self.plant_conf["v2g_battery_nominal_energy_capacity"]
+                            / self.timeStep,
+                        )
+                    }
+                )
+                # Enforce window constraints
+                if win_start > 0:
+                    for j in range (win_end_prev, win_start):
+                        if window_start_timestep[0] != 0:
+                            v2g_SOC_opt_pentalty[j] = vehicle_leave_subtract[k]/(win_start - win_end_prev)
+                        elif len(window_start_timestep) > 0:
+                            v2g_SOC_opt_pentalty[j] = vehicle_leave_subtract[k-1]/(win_start - win_end_prev)
+                    if k-1 == -1:
+                        constraints.update(
+                        {
+                            "pos_constraint_win{}_start_timestep".format(
+                                k
+                            ): plp.LpConstraint(
+                                e=plp.lpSum(
+                                    v2g_P_sto_pos[i] * self.timeStep
+                                    for i in range(0, win_start)
+                                ),
+                                sense=plp.LpConstraintEQ,
+                                rhs=0,
+                            )
+                        }
+                        )
+                        constraints.update(
+                        {
+                            "neg_constraint_win{}_start_timestep".format(
+                                k
+                            ): plp.LpConstraint(
+                                e=plp.lpSum(
+                                    v2g_P_sto_neg[i] * self.timeStep
+                                    for i in range(0, win_start)
+                                ),
+                                sense=plp.LpConstraintEQ,
+                                rhs=0,
+                            )
+                        }
+                        )
+                    else:
+                        constraints.update(
+                        {
+                            "pos_constraint_win{}_start_timestep".format(
+                                k
+                            ): plp.LpConstraint(
+                                e=plp.lpSum(
+                                    v2g_P_sto_pos[i] * self.timeStep
+                                    for i in range(win_end_prev, win_start)
+                                ),
+                                sense=plp.LpConstraintEQ,
+                                rhs=0,
+                            )
+                        }
+                        )
+                        constraints.update(
+                        {
+                            "neg_constraint_win{}_start_timestep".format(
+                                k
+                            ): plp.LpConstraint(
+                                e=plp.lpSum(
+                                    v2g_P_sto_neg[i] * self.timeStep
+                                    for i in range(win_end_prev, win_start)
+                                ),
+                                sense=plp.LpConstraintEQ,
+                                rhs=0,
+                            )
+                        }
+                        )
+                if win_end > 0:
+                    if k == self.optim_conf["number_of_available_windows"] - 1:
+                        constraints.update(
+                        {
+                            "pos_constraint_win{}_end_timestep".format(
+                                k
+                            ): plp.LpConstraint(
+                                e=plp.lpSum(
+                                    v2g_P_sto_pos[i] * self.timeStep
+                                    for i in range(win_end, 0)
+                                ),
+                                sense=plp.LpConstraintEQ,
+                                rhs=0,
+                            )
+                        }
+                        )
+                        constraints.update(
+                        {
+                            "neg_constraint_win{}_end_timestep".format(
+                                k
+                            ): plp.LpConstraint(
+                                e=plp.lpSum(
+                                    v2g_P_sto_neg[i] * self.timeStep
+                                    for i in range(win_end, 0)
+                                ),
+                                sense=plp.LpConstraintEQ,
+                                rhs=0,
+                            )
+                        }
+                        )
+                    else:
+                        constraints.update(
+                        {
+                            "pos_constraint_win{}_end_timestep".format(
+                                k
+                            ): plp.LpConstraint(
+                                e=plp.lpSum(
+                                    v2g_P_sto_pos[i] * self.timeStep
+                                    for i in range(win_end, win_start_next)
+                                ),
+                                sense=plp.LpConstraintEQ,
+                                rhs=0,
+                            )
+                        }
+                        )
+                        constraints.update(
+                        {
+                            "neg_constraint_win{}_end_timestep".format(
+                                k
+                            ): plp.LpConstraint(
+                                e=plp.lpSum(
+                                    v2g_P_sto_neg[i] * self.timeStep
+                                    for i in range(win_end, win_start_next)
+                                ),
+                                sense=plp.LpConstraintEQ,
+                                rhs=0,
+                            )
+                        }
+                        )
+            print("\n\n\n\n",v2g_soc_final)
             # Optional constraints to avoid charging the battery from the grid
             if self.optim_conf["v2g_set_nocharge_from_grid"]:
                 constraints.update(
@@ -1294,6 +1461,8 @@ class Optimization:
                             * (1 / self.plant_conf["v2g_battery_discharge_efficiency"])
                             + self.plant_conf["v2g_battery_charge_efficiency"]
                             * v2g_P_sto_neg[j]
+                            + v2g_SOC_opt_pentalty[j] * self.plant_conf["v2g_battery_nominal_energy_capacity"]
+                                / self.timeStep
                             for j in range(i)
                         ),
                         sense=plp.LpConstraintLE,
@@ -1317,6 +1486,8 @@ class Optimization:
                             * (1 / self.plant_conf["v2g_battery_discharge_efficiency"])
                             + self.plant_conf["v2g_battery_charge_efficiency"]
                             * v2g_P_sto_neg[j]
+                            + v2g_SOC_opt_pentalty[j] * self.plant_conf["v2g_battery_nominal_energy_capacity"]
+                                / self.timeStep
                             for j in range(i)
                         ),
                         sense=plp.LpConstraintLE,
@@ -1340,6 +1511,8 @@ class Optimization:
                             * (1 / self.plant_conf["v2g_battery_discharge_efficiency"])
                             + self.plant_conf["v2g_battery_charge_efficiency"]
                             * v2g_P_sto_neg[i]
+                            + v2g_SOC_opt_pentalty[i] * self.plant_conf["v2g_battery_nominal_energy_capacity"]
+                            / self.timeStep 
                             for i in set_I
                         ),
                         sense=plp.LpConstraintEQ,
@@ -1422,7 +1595,9 @@ class Optimization:
                 * (self.timeStep / (self.plant_conf["v2g_battery_nominal_energy_capacity"]))
                 for i in set_I
             ]
-            v2g_SOCinit = copy.copy(soc_init)
+            v2g_SOC_opt_delta += v2g_SOC_opt_pentalty
+
+            v2g_SOCinit = copy.copy(v2g_soc_init)
             v2g_SOC_opt = []
             for i in set_I:
                 v2g_SOC_opt.append(v2g_SOCinit - v2g_SOC_opt_delta[i])
@@ -1714,12 +1889,13 @@ class Optimization:
         return self.opt_res
 
     @staticmethod
-    def validate_def_timewindow(
-        start: int, end: int, min_steps: int, window: int
+    def validate_timewindow(
+        type: str, start: int, end: int, min_steps: int, window: int
     ) -> Tuple[int, int, str]:
         r"""
         Helper function to validate (and if necessary: correct) the defined optimization window of a deferrable load.
-
+        :param type: The type of time window, i.e either "win" for available ev window or "dl" for deferrable load.
+        :type type: str  
         :param start: Start timestep of the optimization window of the deferrable load
         :type start: int
         :param end: End timestep of the optimization window of the deferrable load
@@ -1748,6 +1924,8 @@ class Optimization:
                 # If the available timeframe is shorter than the number of timesteps needed to meet the hours to operate (def_total_hours), issue a warning.
                 if (end_validated - start_validated) < min_steps:
                     warning = "Available timeframe is shorter than the specified number of hours to operate. Optimization will fail."
-        else:
+        elif type == "dl":
             warning = "Invalid timeframe for deferrable load (start timestep is not <= end timestep). Continuing optimization without timewindow constraint."
+        elif type == "win":
+            warning = "Invalid timeframe for EV available window (start timestep is not <= end timestep). Continuing optimization without timewindow constraint."
         return start_validated, end_validated, warning
