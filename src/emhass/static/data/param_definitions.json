@@ -566,9 +566,9 @@
       "input": "float",
       "default_value": 0.9
     },
-    "v2g_battery_target_state_of_charge": {
-      "friendly_name": "Battery desired percentage after optimization",
-      "Description": "The desired battery state of charge at the end of each optimization cycle. (percentage/100)",
+    "v2g_battery_start_state_of_charge": {
+      "friendly_name": "Battery percentage upon optimization",
+      "Description": "The actual battery state of charge at the start of the optimization cycle. (percentage/100)",
       "input": "float",
       "default_value": 0.6
     }

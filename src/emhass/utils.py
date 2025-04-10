@@ -512,7 +512,7 @@ def treat_runtimeparams(
                 soc_init = params["plant_conf"]["battery_maximum_state_of_charge"]
             params["passed_data"]["soc_init"] = soc_init
             if "v2g_soc_init" not in runtimeparams.keys():
-                v2g_soc_init = params["plant_conf"]["v2g_battery_target_state_of_charge"]
+                v2g_soc_init = params["plant_conf"]["v2g_battery_start_state_of_charge"]
             else:
                 v2g_soc_init = runtimeparams["v2g_soc_init"]
             if v2g_soc_init < params["plant_conf"]["v2g_battery_minimum_state_of_charge"]:
@@ -534,7 +534,7 @@ def treat_runtimeparams(
                 soc_final = params["plant_conf"]["battery_maximum_state_of_charge"]
             params["passed_data"]["soc_final"] = soc_final
             if "v2g_soc_final" not in runtimeparams.keys():
-                v2g_soc_final = params["plant_conf"]["v2g_battery_target_state_of_charge"]
+                v2g_soc_final = params["plant_conf"]["v2g_battery_start_state_of_charge"]
             else:
                 v2g_soc_final = runtimeparams["v2g_soc_final"]
             if v2g_soc_final < params["plant_conf"]["v2g_battery_minimum_state_of_charge"]:

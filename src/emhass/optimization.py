@@ -186,15 +186,12 @@ class Optimization:
         # Prepare some data in the case of a v2g battery
         if self.optim_conf["set_use_v2g"]:
             if v2g_soc_init is None:
-                if v2g_soc_final is not None:
-                    v2g_soc_init = v2g_soc_final
-                else:
-                    v2g_soc_init = self.plant_conf["v2g_battery_target_state_of_charge"]
+                v2g_soc_init = self.plant_conf["v2g_battery_start_state_of_charge"]
             if v2g_soc_final is None:
                 if v2g_soc_init is not None:
                     v2g_soc_final = v2g_soc_init
                 else:
-                    v2g_soc_final = self.plant_conf["v2g_battery_target_state_of_charge"]
+                    v2g_soc_final = self.plant_conf["v2g_battery_start_state_of_charge"]
 
         # If def_total_timestep os set, bypass def_total_hours
         if def_total_timestep is not None:
@@ -1505,7 +1502,7 @@ class Optimization:
             )
             constraints.update(
                 {
-                    "v2g_constraint_socfinal_{}".format(0): plp.LpConstraint(
+                    "v2g_constraint_minsocfinal_{}".format(0): plp.LpConstraint(
                         e=plp.lpSum(
                             v2g_P_sto_pos[i]
                             * (1 / self.plant_conf["v2g_battery_discharge_efficiency"])
@@ -1515,10 +1512,39 @@ class Optimization:
                             / self.timeStep 
                             for i in set_I
                         ),
-                        sense=plp.LpConstraintEQ,
-                        rhs=(v2g_soc_init - v2g_soc_final)
-                        * self.plant_conf["v2g_battery_nominal_energy_capacity"]
-                        / self.timeStep,
+                        sense=plp.LpConstraintLE,
+                        rhs=(
+                            self.plant_conf["v2g_battery_nominal_energy_capacity"]
+                            / self.timeStep
+                        )
+                        * (
+                            v2g_soc_init
+                            - self.plant_conf["v2g_battery_minimum_state_of_charge"]
+                        )
+                    )
+                }
+            )
+            constraints.update(
+                {
+                    "v2g_constraint_maxsocfinal_{}".format(0): plp.LpConstraint(
+                        e=plp.lpSum(
+                            v2g_P_sto_pos[i]
+                            * (1 / self.plant_conf["v2g_battery_discharge_efficiency"])
+                            + self.plant_conf["v2g_battery_charge_efficiency"]
+                            * v2g_P_sto_neg[i]
+                            + v2g_SOC_opt_pentalty[i] * self.plant_conf["v2g_battery_nominal_energy_capacity"]
+                            / self.timeStep 
+                            for i in set_I
+                        ),
+                        sense=plp.LpConstraintGE,
+                        rhs=(
+                            self.plant_conf["v2g_battery_nominal_energy_capacity"]
+                            / self.timeStep
+                        )
+                        * (
+                            v2g_soc_init
+                            - self.plant_conf["v2g_battery_maximum_state_of_charge"]
+                        )
                     )
                 }
             )
