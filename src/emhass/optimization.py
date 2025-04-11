@@ -242,7 +242,7 @@ class Optimization:
         P_grid_neg = {
             (i): plp.LpVariable(
                 cat="Continuous",
-                lowBound=-3*self.plant_conf["maximum_power_to_grid"],
+                lowBound=-self.plant_conf["maximum_power_to_grid"],
                 upBound=0,
                 name="P_grid_neg{}".format(i),
             )
@@ -252,7 +252,7 @@ class Optimization:
             (i): plp.LpVariable(
                 cat="Continuous",
                 lowBound=0,
-                upBound=3*self.plant_conf["maximum_power_from_grid"],
+                upBound=self.plant_conf["maximum_power_from_grid"],
                 name="P_grid_pos{}".format(i),
             )
             for i in set_I
@@ -643,7 +643,7 @@ class Optimization:
         constraints.update(
             {
                 "constraint_pgridpos_{}".format(i): plp.LpConstraint(
-                    e=P_grid_pos[i] - 3 * self.plant_conf["maximum_power_from_grid"] * D[i],
+                    e=P_grid_pos[i] -self.plant_conf["maximum_power_from_grid"] * D[i],
                     sense=plp.LpConstraintLE,
                     rhs=0,
                 )
