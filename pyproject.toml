@@ -77,7 +77,7 @@ include = [
 emhass = "emhass.command_line:main"
 
 [project.urls]
-Homepage = "https://github.com/davidusb-geek/emhass"
+Homepage = "https://github.com/Biskop256/emhass-test"
 
 #strict is strict
 #[tool.mypy]

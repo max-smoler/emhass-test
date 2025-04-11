@@ -106,7 +106,7 @@ LABEL \
     io.hass.version=${BUILD_VERSION} \
     io.hass.type="addon" \
     io.hass.arch="aarch64|amd64" \
-    org.opencontainers.image.source="https://github.com/davidusb-geek/emhass" \
+    org.opencontainers.image.source="https://github.com/Biskop256/emhass-test" \
     org.opencontainers.image.description="EMHASS python package and requirements, in Home Assistant Debian container."
 
 # Set up venv
