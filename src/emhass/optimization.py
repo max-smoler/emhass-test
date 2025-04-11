@@ -257,12 +257,29 @@ class Optimization:
             )
             for i in set_I
         }
+        # P_grid_pos = {
+        #     (i): plp.LpVariable(
+        #         cat="Continuous",
+        #         lowBound=0,
+        #         upBound=cap_weight[i]*self.plant_conf["maximum_power_from_grid"],
+        #         name="P_grid_pos{}".format(i),
+        #     )
+        #     for i in set_I
+        # }
         P_grid_pos = {
             (i): plp.LpVariable(
                 cat="Continuous",
                 lowBound=0,
-                upBound=cap_weight[i]*self.plant_conf["maximum_power_from_grid"],
                 name="P_grid_pos{}".format(i),
+            )
+            for i in set_I
+        }
+
+        P_grid_pos_slack = {
+            (i): plp.LpVariable(
+                cat="Continuous",
+                lowBound=0,
+                name="P_grid_pos_slack{}".format(i),
             )
             for i in set_I
         }
@@ -446,6 +463,12 @@ class Optimization:
                     -0.001 * self.timeStep * unit_load_cost[i] * (P_grid_pos[i]) # + P_grid_pos_add[i])
                     for i in set_I
                 )
+                penalty_weight = 1000  # Adjust this number as needed
+
+                objective += plp.lpSum(
+                    penalty_weight * P_grid_pos_slack[i] * self.timeStep
+                    for i in set_I
+                )
 
         elif self.costfun == "self-consumption":
             if type_self_conso == "bigm":
@@ -605,6 +628,14 @@ class Optimization:
                     for i in set_I
                 }
             )
+            constraints.update({
+                "elastic_gridlimit{}".format(i): plp.LpConstraint(
+                    e=P_grid_pos[i] - P_grid_pos_slack[i],
+                    sense=plp.LpConstraintLE,
+                    rhs=self.plant_conf["maximum_power_from_grid"]
+                )
+                for i in set_I
+            })
             constraints.update(
                 {
                     "constraint_hybrid_inverter2_{}".format(i): plp.LpConstraint(
