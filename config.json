@@ -1,6 +1,6 @@
 {
     "logging_level": "DEBUG",
-    "costfun": "profit",
+    "costfun": "cost",
     "optimization_time_step": 60,
     "historic_days_to_retrieve": 3,
     "method_ts_round": "nearest",
@@ -16,14 +16,14 @@
     "battery_dynamic_min": -0.9,
     "weight_battery_discharge": 1,
     "weight_battery_charge": 1,
-    "sensor_power_photovoltaics": "sensor.power_photovoltaics",
-    "sensor_power_load_no_var_loads": "sensor.power_load_no_var_loads",
+    "sensor_power_photovoltaics": "sensor.solax1_solar_energy_total",
+    "sensor_power_load_no_var_loads": "sensor.solax1_grid_power",
     "sensor_replace_zero": [
-        "sensor.power_photovoltaics"
+        "sensor.solax1_solar_energy_total"
     ],
     "sensor_linear_interp": [
-        "sensor.power_photovoltaics",
-        "sensor.power_load_no_var_loads"
+        "sensor.solax1_solar_energy_total",
+        "sensor.momentary_active_import"
     ],
     "load_negative": false,
     "set_zero_min": true,
@@ -39,7 +39,8 @@
     "weather_forecast_method": "open-meteo",
     "load_forecast_method": "naive",
     "delta_forecast_daily": 1,
-    "load_cost_forecast_method": "csv",
+    "load_cost_forecast_method": "power_peak_tariffs",
+    "power_tariff_company": "ellevio",
     "start_timesteps_of_each_deferrable_load": [
         0,
         0
@@ -106,11 +107,11 @@
     "inverter_is_hybrid": true,
     "compute_curtailment": false,
     "set_use_battery": true,
-    "battery_discharge_power_max": 1000,
-    "battery_charge_power_max": 1000,
+    "battery_discharge_power_max": 5000,
+    "battery_charge_power_max": 5000,
     "battery_discharge_efficiency": 0.95,
     "battery_charge_efficiency": 0.95,
-    "battery_nominal_energy_capacity": 5000,
+    "battery_nominal_energy_capacity": 20000,
     "battery_minimum_state_of_charge": 0.1,
     "battery_maximum_state_of_charge": 0.9,
     "battery_target_state_of_charge": 0.6,
@@ -139,11 +140,11 @@
         0.05,
         0.1
     ],
-    "v2g_battery_discharge_power_max": 1000,
-    "v2g_battery_charge_power_max": 1000,
+    "v2g_battery_discharge_power_max": 10000,
+    "v2g_battery_charge_power_max": 10000,
     "v2g_battery_discharge_efficiency": 0.95,
     "v2g_battery_charge_efficiency": 0.95,
-    "v2g_battery_nominal_energy_capacity": 5000,
+    "v2g_battery_nominal_energy_capacity": 75000,
     "v2g_battery_minimum_state_of_charge": 0.1,
     "v2g_battery_maximum_state_of_charge": 0.9,
     "v2g_battery_start_state_of_charge": 0.8,

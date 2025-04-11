@@ -1266,6 +1266,12 @@ class Forecast(object):
                 )
                 # Fill the final DF
                 df_final[self.var_load_cost] = forecast_out
+        elif method == "power_peak_tariffs":
+            forecast_dates_csv = self.get_forecast_days_csv(timedelta_days=0)
+            forecast_out = self.get_forecast_out_from_csv_or_list(
+                df_final, forecast_dates_csv, csv_path
+            )
+            df_final[self.var_load_cost] = forecast_out
         else:
             self.logger.error("Passed method is not valid")
             return False

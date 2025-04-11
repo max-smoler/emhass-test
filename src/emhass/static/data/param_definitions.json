@@ -176,7 +176,8 @@
       "input": "select",
       "select_options": [
         "hp_hc_periods",
-        "csv"
+        "csv",
+        "power_peak_tariffs"
       ],
       "default_value": "hp_hc_periods"
     },
@@ -186,9 +187,12 @@
       "input": "select",
       "select_options": [
         "goteborg_energi",
-        "elevio"
+        "ellevio"
       ],
-      "default_value": "goteborg_energi"
+      "default_value": "ellevio",
+      "requires": {
+        "load_cost_forecast_method": "power_peak_tariffs"
+      }
     },
     "load_peak_hour_periods": {
       "friendly_name": "List peak hour periods",
