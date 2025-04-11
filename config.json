@@ -39,7 +39,7 @@
     "weather_forecast_method": "open-meteo",
     "load_forecast_method": "naive",
     "delta_forecast_daily": 1,
-    "load_cost_forecast_method": "power_peak_tariffs",
+    "load_cost_forecast_method": "csv",
     "power_tariff_company": "ellevio",
     "start_timesteps_of_each_deferrable_load": [
         0,
@@ -81,6 +81,7 @@
     ],
     "load_peak_hours_cost": 0.19,
     "load_offpeak_hours_cost": 0.14,
+    "set_use_tariff_peaks": true,
     "production_price_forecast_method": "csv",
     "photovoltaic_production_sell_price": 0.1419,
     "maximum_power_from_grid": 1999,

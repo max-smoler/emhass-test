@@ -110,11 +110,11 @@ class Optimization:
             )
             self.lp_solver_path = "/usr/bin/cbc"
 
-    def def_is_within_demand_window(self, current_timestamp: int) -> bool:
-        if self.power_tariff_company == "ellevio":
-            window_start = 6
-            window_end = 22
-        return window_start <= current_timestamp < window_end
+    # def def_is_within_demand_window(self, current_timestamp: int) -> bool:
+    #     if self.power_tariff_company == "ellevio":
+    #         tariff_window_start = 6
+    #         tariff_window_end = 22
+    #     return tariff_window_start <= current_timestamp < tariff_window_end
 
     def perform_optimization(
         self,
@@ -135,7 +135,6 @@ class Optimization:
         window_end_timestep: Optional[list] = None,
         vehicle_leave_subtract: Optional[list] = None,
         vehicle_use_charge_min: Optional[float] = None,
-        load_cost_forecast_method: Optional[str] = None,
         debug: Optional[bool] = False,
     ) -> pd.DataFrame:
         r"""
@@ -215,8 +214,8 @@ class Optimization:
             def_end_timestep = self.optim_conf["end_timesteps_of_each_deferrable_load"]
         type_self_conso = "bigm"  # maxmin
 
-        if load_cost_forecast_method is None:
-            load_cost_forecast_method = self.optim_conf["load_cost_forecast_method"]
+        # if load_cost_forecast_method is None:
+        #     load_cost_forecast_method = self.optim_conf["load_cost_forecast_method"]
 
         if window_start_timestep is None:
             window_start_timestep = self.optim_conf[
@@ -237,7 +236,17 @@ class Optimization:
         n = len(data_opt.index)
         set_I = range(n)
         M = 10e10
+        cap_weight = np.ones(n)
 
+        # In cap_weights halves the costs of effect peaks in the night
+        if self.optim_conf["set_use_tariff_peaks"]:
+            if self.power_tariff_company == "ellevio":
+                tariff_window_start = 6
+                tariff_window_end = 22
+            cap_weight = 2 * np.ones(n)
+            cap_weight[tariff_window_start:tariff_window_end] = 1
+
+        print("\n\n\n", cap_weight)
         ## Add decision variables
         P_grid_neg = {
             (i): plp.LpVariable(
@@ -252,7 +261,7 @@ class Optimization:
             (i): plp.LpVariable(
                 cat="Continuous",
                 lowBound=0,
-                upBound=self.plant_conf["maximum_power_from_grid"],
+                upBound=cap_weight[i]*self.plant_conf["maximum_power_from_grid"],
                 name="P_grid_pos{}".format(i),
             )
             for i in set_I
@@ -529,7 +538,9 @@ class Optimization:
                         + P_grid_neg[i]
                         + P_grid_pos[i]
                         + P_sto_pos[i]
-                        + P_sto_neg[i],
+                        + P_sto_neg[i]
+                        + v2g_P_sto_pos[i]
+                        + v2g_P_sto_neg[i],
                         sense=plp.LpConstraintEQ,
                         rhs=0,
                     )
@@ -544,7 +555,9 @@ class Optimization:
                         + P_grid_neg[i]
                         + P_grid_pos[i]
                         + P_sto_pos[i]
-                        + P_sto_neg[i],
+                        + P_sto_neg[i]
+                        + v2g_P_sto_pos[i]
+                        + v2g_P_sto_neg[i],
                         sense=plp.LpConstraintEQ,
                         rhs=0,
                     )
@@ -583,6 +596,8 @@ class Optimization:
                         - P_PV_curtailment[i]
                         + P_sto_pos[i]
                         + P_sto_neg[i]
+                        + v2g_P_sto_pos[i]
+                        + v2g_P_sto_neg[i]
                         - P_nom_inverter,
                         sense=plp.LpConstraintLE,
                         rhs=0,
@@ -597,6 +612,8 @@ class Optimization:
                         - P_PV_curtailment[i]
                         + P_sto_pos[i]
                         + P_sto_neg[i]
+                        + v2g_P_sto_pos[i]
+                        + v2g_P_sto_neg[i]
                         - P_hybrid_inverter[i],
                         sense=plp.LpConstraintEQ,
                         rhs=0,
@@ -643,7 +660,7 @@ class Optimization:
         constraints.update(
             {
                 "constraint_pgridpos_{}".format(i): plp.LpConstraint(
-                    e=P_grid_pos[i] -self.plant_conf["maximum_power_from_grid"] * D[i],
+                    e=P_grid_pos[i] - cap_weight[i] * self.plant_conf["maximum_power_from_grid"] * D[i],
                     sense=plp.LpConstraintLE,
                     rhs=0,
                 )

@@ -170,14 +170,19 @@
     }
   },
   "Tariff": {
+    "set_use_tariff_peaks": {
+      "friendly_name": "Enable usage of power peak billing",
+      "Description": "Set to True if we should consider a billing based on power peaks. Defaults to False",
+      "input": "boolean",
+      "default_value": false
+    },
     "load_cost_forecast_method": {
       "friendly_name": "Load cost method",
       "Description": "Define the method that will be used for load cost forecast. The options are ‘hp_hc_periods’ for peak and non-peak hours contracts, and ‘csv’ to load custom cost from CSV file.",
       "input": "select",
       "select_options": [
         "hp_hc_periods",
-        "csv",
-        "power_peak_tariffs"
+        "csv"
       ],
       "default_value": "hp_hc_periods"
     },
@@ -189,10 +194,7 @@
         "goteborg_energi",
         "ellevio"
       ],
-      "default_value": "ellevio",
-      "requires": {
-        "load_cost_forecast_method": "power_peak_tariffs"
-      }
+      "default_value": "ellevio"
     },
     "load_peak_hour_periods": {
       "friendly_name": "List peak hour periods",

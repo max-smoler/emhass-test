@@ -36,6 +36,7 @@
     4,
     0
   ],
+  "set_use_tariff_peaks": false,
   "weather_forecast_method": "open-meteo",
   "load_forecast_method": "naive",
   "delta_forecast_daily": 1,
