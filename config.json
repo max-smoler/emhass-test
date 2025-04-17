@@ -10,7 +10,7 @@
     "lp_solver": "default",
     "lp_solver_path": "empty",
     "set_nocharge_from_grid": false,
-    "set_nodischarge_to_grid": false,
+    "set_nodischarge_to_grid": true,
     "set_battery_dynamic": false,
     "battery_dynamic_max": 0.9,
     "battery_dynamic_min": -0.9,
@@ -60,7 +60,7 @@
         ],
         "period_hp_2": [
             {
-                "start": "17:00"
+                "start": "17:24"
             },
             {
                 "end": "20:24"
@@ -81,12 +81,12 @@
     ],
     "load_peak_hours_cost": 0.19,
     "load_offpeak_hours_cost": 0.14,
-    "set_use_tariff_peaks": true,
+    "set_use_tariff_peaks": false,
     "production_price_forecast_method": "csv",
     "photovoltaic_production_sell_price": 0.1419,
     "maximum_power_from_grid": 1999,
     "maximum_power_to_grid": 15000,
-    "set_use_pv": true,
+    "set_use_pv": false,
     "pv_module_model": [
         "CSUN_Eurasia_Energy_Systems_Industry_and_Trade_CSUN295_60M"
     ],
@@ -107,7 +107,7 @@
     ],
     "inverter_is_hybrid": true,
     "compute_curtailment": false,
-    "set_use_battery": true,
+    "set_use_battery": false,
     "battery_discharge_power_max": 5000,
     "battery_charge_power_max": 5000,
     "battery_discharge_efficiency": 0.95,

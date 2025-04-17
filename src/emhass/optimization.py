@@ -270,19 +270,22 @@ class Optimization:
             (i): plp.LpVariable(
                 cat="Continuous",
                 lowBound=0,
+                upBound=self.plant_conf["maximum_power_from_grid"],
                 name="P_grid_pos{}".format(i),
             )
             for i in set_I
         }
 
-        P_grid_pos_slack = {
-            (i): plp.LpVariable(
-                cat="Continuous",
-                lowBound=0,
-                name="P_grid_pos_slack{}".format(i),
-            )
-            for i in set_I
-        }
+        # insert if tariff
+        if self.optim_conf["set_use_tariff_peaks"]:
+            P_grid_pos_slack = {
+                (i): plp.LpVariable(
+                    cat="Continuous",
+                    lowBound=0,
+                    name="P_grid_pos_slack{}".format(i),
+                )
+                for i in set_I
+            }
         P_deferrable = []
         P_def_bin1 = []
         for k in range(self.optim_conf["number_of_deferrable_loads"]):
@@ -463,12 +466,13 @@ class Optimization:
                     -0.001 * self.timeStep * unit_load_cost[i] * (P_grid_pos[i]) # + P_grid_pos_add[i])
                     for i in set_I
                 )
-                penalty_weight = 1000  # Adjust this number as needed
+                if self.optim_conf["set_use_tariff_peaks"]:
+                    penalty_weight = 1000  # Adjust this number as needed
 
-                objective += plp.lpSum(
-                    penalty_weight * P_grid_pos_slack[i] * self.timeStep
-                    for i in set_I
-                )
+                    objective += plp.lpSum(
+                        penalty_weight * P_grid_pos_slack[i] * self.timeStep
+                        for i in set_I
+                    )
 
         elif self.costfun == "self-consumption":
             if type_self_conso == "bigm":
@@ -628,13 +632,14 @@ class Optimization:
                     for i in set_I
                 }
             )
-            constraints.update({
-                "elastic_gridlimit{}".format(i): plp.LpConstraint(
-                    e=P_grid_pos[i] - P_grid_pos_slack[i],
-                    sense=plp.LpConstraintLE,
-                    rhs=self.plant_conf["maximum_power_from_grid"]
-                )
-                for i in set_I
+            if self.optim_conf["set_use_tariff_peaks"]:
+                constraints.update({
+                    "elastic_gridlimit{}".format(i): plp.LpConstraint(
+                        e=P_grid_pos[i] - P_grid_pos_slack[i],
+                        sense=plp.LpConstraintLE,
+                        rhs=self.plant_conf["maximum_power_from_grid"]
+                    )
+                    for i in set_I
             })
             constraints.update(
                 {
@@ -1241,177 +1246,7 @@ class Optimization:
                         }
                         )
             print("\n\n\n\n",v2g_soc_final)
-            # The battery constraints
-            if self.optim_conf["set_use_battery"]:
-                # Optional constraints to avoid charging the battery from the grid
-                if self.optim_conf["set_nocharge_from_grid"]:
-                    constraints.update(
-                        {
-                            "constraint_nocharge_from_grid_{}".format(i): plp.LpConstraint(
-                                e=P_sto_neg[i] + P_PV[i], sense=plp.LpConstraintGE, rhs=0
-                            )
-                            for i in set_I
-                        }
-                    )
-                # Optional constraints to avoid discharging the battery to the grid
-                if self.optim_conf["set_nodischarge_to_grid"]:
-                    constraints.update(
-                        {
-                            "constraint_nodischarge_to_grid_{}".format(i): plp.LpConstraint(
-                                e=P_grid_neg[i] + P_PV[i], sense=plp.LpConstraintGE, rhs=0
-                            )
-                            for i in set_I
-                        }
-                    )
-                # Limitation of power dynamics in power per unit of time
-                if self.optim_conf["set_battery_dynamic"]:
-                    constraints.update(
-                        {
-                            "constraint_pos_batt_dynamic_max_{}".format(
-                                i
-                            ): plp.LpConstraint(
-                                e=P_sto_pos[i + 1] - P_sto_pos[i],
-                                sense=plp.LpConstraintLE,
-                                rhs=self.timeStep
-                                * self.optim_conf["battery_dynamic_max"]
-                                * self.plant_conf["battery_discharge_power_max"],
-                            )
-                            for i in range(n - 1)
-                        }
-                    )
-                    constraints.update(
-                        {
-                            "constraint_pos_batt_dynamic_min_{}".format(
-                                i
-                            ): plp.LpConstraint(
-                                e=P_sto_pos[i + 1] - P_sto_pos[i],
-                                sense=plp.LpConstraintGE,
-                                rhs=self.timeStep
-                                * self.optim_conf["battery_dynamic_min"]
-                                * self.plant_conf["battery_discharge_power_max"],
-                            )
-                            for i in range(n - 1)
-                        }
-                    )
-                    constraints.update(
-                        {
-                            "constraint_neg_batt_dynamic_max_{}".format(
-                                i
-                            ): plp.LpConstraint(
-                                e=P_sto_neg[i + 1] - P_sto_neg[i],
-                                sense=plp.LpConstraintLE,
-                                rhs=self.timeStep
-                                * self.optim_conf["battery_dynamic_max"]
-                                * self.plant_conf["battery_charge_power_max"],
-                            )
-                            for i in range(n - 1)
-                        }
-                    )
-                    constraints.update(
-                        {
-                            "constraint_neg_batt_dynamic_min_{}".format(
-                                i
-                            ): plp.LpConstraint(
-                                e=P_sto_neg[i + 1] - P_sto_neg[i],
-                                sense=plp.LpConstraintGE,
-                                rhs=self.timeStep
-                                * self.optim_conf["battery_dynamic_min"]
-                                * self.plant_conf["battery_charge_power_max"],
-                            )
-                            for i in range(n - 1)
-                        }
-                    )
-                # Then the classic battery constraints
-                constraints.update(
-                    {
-                        "constraint_pstopos_{}".format(i): plp.LpConstraint(
-                            e=P_sto_pos[i]
-                            - self.plant_conf["battery_discharge_efficiency"]
-                            * self.plant_conf["battery_discharge_power_max"]
-                            * E[i],
-                            sense=plp.LpConstraintLE,
-                            rhs=0,
-                        )
-                        for i in set_I
-                    }
-                )
-                constraints.update(
-                    {
-                        "constraint_pstoneg_{}".format(i): plp.LpConstraint(
-                            e=-P_sto_neg[i]
-                            - (1 / self.plant_conf["battery_charge_efficiency"])
-                            * self.plant_conf["battery_charge_power_max"]
-                            * (1 - E[i]),
-                            sense=plp.LpConstraintLE,
-                            rhs=0,
-                        )
-                        for i in set_I
-                    }
-                )
-                constraints.update(
-                    {
-                        "constraint_socmax_{}".format(i): plp.LpConstraint(
-                            e=-plp.lpSum(
-                                P_sto_pos[j]
-                                * (1 / self.plant_conf["battery_discharge_efficiency"])
-                                + self.plant_conf["battery_charge_efficiency"]
-                                * P_sto_neg[j]
-                                for j in range(i)
-                            ),
-                            sense=plp.LpConstraintLE,
-                            rhs=(
-                                self.plant_conf["battery_nominal_energy_capacity"]
-                                / self.timeStep
-                            )
-                            * (
-                                self.plant_conf["battery_maximum_state_of_charge"]
-                                - soc_init
-                            ),
-                        )
-                        for i in set_I
-                    }
-                )
-                constraints.update(
-                    {
-                        "constraint_socmin_{}".format(i): plp.LpConstraint(
-                            e=plp.lpSum(
-                                P_sto_pos[j]
-                                * (1 / self.plant_conf["battery_discharge_efficiency"])
-                                + self.plant_conf["battery_charge_efficiency"]
-                                * P_sto_neg[j]
-                                for j in range(i)
-                            ),
-                            sense=plp.LpConstraintLE,
-                            rhs=(
-                                self.plant_conf["battery_nominal_energy_capacity"]
-                                / self.timeStep
-                            )
-                            * (
-                                soc_init
-                                - self.plant_conf["battery_minimum_state_of_charge"]
-                            ),
-                        )
-                        for i in set_I
-                    }
-                )
-                constraints.update(
-                    {
-                        "constraint_socfinal_{}".format(0): plp.LpConstraint(
-                            e=plp.lpSum(
-                                P_sto_pos[i]
-                                * (1 / self.plant_conf["battery_discharge_efficiency"])
-                                + self.plant_conf["battery_charge_efficiency"]
-                                * P_sto_neg[i]
-                                for i in set_I
-                            ),
-                            sense=plp.LpConstraintEQ,
-                            rhs=(soc_init - soc_final)
-                            * self.plant_conf["battery_nominal_energy_capacity"]
-                            / self.timeStep,
-                        )
-                    }
-                )
-            opt_model.constraints = constraints
+
             # Optional constraints to avoid charging the battery from the grid
             if self.optim_conf["v2g_set_nocharge_from_grid"]:
                 constraints.update(
@@ -1612,6 +1447,177 @@ class Optimization:
                             v2g_soc_init
                             - self.plant_conf["v2g_battery_maximum_state_of_charge"]
                         )
+                    )
+                }
+            )
+        opt_model.constraints = constraints
+        # The battery constraints
+        if self.optim_conf["set_use_battery"]:
+            # Optional constraints to avoid charging the battery from the grid
+            if self.optim_conf["set_nocharge_from_grid"]:
+                constraints.update(
+                    {
+                        "constraint_nocharge_from_grid_{}".format(i): plp.LpConstraint(
+                            e=P_sto_neg[i] + P_PV[i], sense=plp.LpConstraintGE, rhs=0
+                        )
+                        for i in set_I
+                    }
+                )
+            # Optional constraints to avoid discharging the battery to the grid
+            if self.optim_conf["set_nodischarge_to_grid"]:
+                constraints.update(
+                    {
+                        "constraint_nodischarge_to_grid_{}".format(i): plp.LpConstraint(
+                            e=P_grid_neg[i] + P_PV[i], sense=plp.LpConstraintGE, rhs=0
+                        )
+                        for i in set_I
+                    }
+                )
+            # Limitation of power dynamics in power per unit of time
+            if self.optim_conf["set_battery_dynamic"]:
+                constraints.update(
+                    {
+                        "constraint_pos_batt_dynamic_max_{}".format(
+                            i
+                        ): plp.LpConstraint(
+                            e=P_sto_pos[i + 1] - P_sto_pos[i],
+                            sense=plp.LpConstraintLE,
+                            rhs=self.timeStep
+                            * self.optim_conf["battery_dynamic_max"]
+                            * self.plant_conf["battery_discharge_power_max"],
+                        )
+                        for i in range(n - 1)
+                    }
+                )
+                constraints.update(
+                    {
+                        "constraint_pos_batt_dynamic_min_{}".format(
+                            i
+                        ): plp.LpConstraint(
+                            e=P_sto_pos[i + 1] - P_sto_pos[i],
+                            sense=plp.LpConstraintGE,
+                            rhs=self.timeStep
+                            * self.optim_conf["battery_dynamic_min"]
+                            * self.plant_conf["battery_discharge_power_max"],
+                        )
+                        for i in range(n - 1)
+                    }
+                )
+                constraints.update(
+                    {
+                        "constraint_neg_batt_dynamic_max_{}".format(
+                            i
+                        ): plp.LpConstraint(
+                            e=P_sto_neg[i + 1] - P_sto_neg[i],
+                            sense=plp.LpConstraintLE,
+                            rhs=self.timeStep
+                            * self.optim_conf["battery_dynamic_max"]
+                            * self.plant_conf["battery_charge_power_max"],
+                        )
+                        for i in range(n - 1)
+                    }
+                )
+                constraints.update(
+                    {
+                        "constraint_neg_batt_dynamic_min_{}".format(
+                            i
+                        ): plp.LpConstraint(
+                            e=P_sto_neg[i + 1] - P_sto_neg[i],
+                            sense=plp.LpConstraintGE,
+                            rhs=self.timeStep
+                            * self.optim_conf["battery_dynamic_min"]
+                            * self.plant_conf["battery_charge_power_max"],
+                        )
+                        for i in range(n - 1)
+                    }
+                )
+            # Then the classic battery constraints
+            constraints.update(
+                {
+                    "constraint_pstopos_{}".format(i): plp.LpConstraint(
+                        e=P_sto_pos[i]
+                        - self.plant_conf["battery_discharge_efficiency"]
+                        * self.plant_conf["battery_discharge_power_max"]
+                        * E[i],
+                        sense=plp.LpConstraintLE,
+                        rhs=0,
+                    )
+                    for i in set_I
+                }
+            )
+            constraints.update(
+                {
+                    "constraint_pstoneg_{}".format(i): plp.LpConstraint(
+                        e=-P_sto_neg[i]
+                        - (1 / self.plant_conf["battery_charge_efficiency"])
+                        * self.plant_conf["battery_charge_power_max"]
+                        * (1 - E[i]),
+                        sense=plp.LpConstraintLE,
+                        rhs=0,
+                    )
+                    for i in set_I
+                }
+            )
+            constraints.update(
+                {
+                    "constraint_socmax_{}".format(i): plp.LpConstraint(
+                        e=-plp.lpSum(
+                            P_sto_pos[j]
+                            * (1 / self.plant_conf["battery_discharge_efficiency"])
+                            + self.plant_conf["battery_charge_efficiency"]
+                            * P_sto_neg[j]
+                            for j in range(i)
+                        ),
+                        sense=plp.LpConstraintLE,
+                        rhs=(
+                            self.plant_conf["battery_nominal_energy_capacity"]
+                            / self.timeStep
+                        )
+                        * (
+                            self.plant_conf["battery_maximum_state_of_charge"]
+                            - soc_init
+                        ),
+                    )
+                    for i in set_I
+                }
+            )
+            constraints.update(
+                {
+                    "constraint_socmin_{}".format(i): plp.LpConstraint(
+                        e=plp.lpSum(
+                            P_sto_pos[j]
+                            * (1 / self.plant_conf["battery_discharge_efficiency"])
+                            + self.plant_conf["battery_charge_efficiency"]
+                            * P_sto_neg[j]
+                            for j in range(i)
+                        ),
+                        sense=plp.LpConstraintLE,
+                        rhs=(
+                            self.plant_conf["battery_nominal_energy_capacity"]
+                            / self.timeStep
+                        )
+                        * (
+                            soc_init
+                            - self.plant_conf["battery_minimum_state_of_charge"]
+                        ),
+                    )
+                    for i in set_I
+                }
+            )
+            constraints.update(
+                {
+                    "constraint_socfinal_{}".format(0): plp.LpConstraint(
+                        e=plp.lpSum(
+                            P_sto_pos[i]
+                            * (1 / self.plant_conf["battery_discharge_efficiency"])
+                            + self.plant_conf["battery_charge_efficiency"]
+                            * P_sto_neg[i]
+                            for i in set_I
+                        ),
+                        sense=plp.LpConstraintEQ,
+                        rhs=(soc_init - soc_final)
+                        * self.plant_conf["battery_nominal_energy_capacity"]
+                        / self.timeStep,
                     )
                 }
             )
