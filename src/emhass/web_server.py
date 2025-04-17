@@ -385,6 +385,9 @@ def action_call(action_name):
             # Set local costfun variable
             if params.get("optim_conf", None) is not None:
                 costfun = params["optim_conf"].get("costfun", "profit")
+            num_avb_win = params["optim_conf"]["number_of_available_windows"]
+            starts = params["optim_conf"]["start_timesteps_of_each_available_window"]
+            ends = params["optim_conf"]["end_timesteps_of_each_available_window"]
             params = json.dumps(params)
     else:
         app.logger.error("Unable to find params.pkl file")
@@ -446,7 +449,7 @@ def action_call(action_name):
         ActionStr = " >> Performing perfect optimization..."
         app.logger.info(ActionStr)
         opt_res = perfect_forecast_optim(input_data_dict, app.logger)
-        injection_dict = get_injection_dict(opt_res)
+        injection_dict = get_injection_dict(opt_res, num_avb_win, starts, ends)
         with open(str(emhass_conf["data_path"] / "injection_dict.pkl"), "wb") as fid:
             pickle.dump(injection_dict, fid)
         msg = "EMHASS >> Action perfect-optim executed... \n"
@@ -458,7 +461,7 @@ def action_call(action_name):
         ActionStr = " >> Performing dayahead optimization..."
         app.logger.info(ActionStr)
         opt_res = dayahead_forecast_optim(input_data_dict, app.logger)
-        injection_dict = get_injection_dict(opt_res)
+        injection_dict = get_injection_dict(opt_res, num_avb_win, starts, ends)
         with open(str(emhass_conf["data_path"] / "injection_dict.pkl"), "wb") as fid:
             pickle.dump(injection_dict, fid)
         msg = "EMHASS >> Action dayahead-optim executed... \n"

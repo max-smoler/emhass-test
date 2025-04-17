@@ -1,6 +1,6 @@
 {
     "logging_level": "DEBUG",
-    "costfun": "cost",
+    "costfun": "power_peak_tariffs",
     "optimization_time_step": 60,
     "historic_days_to_retrieve": 3,
     "method_ts_round": "nearest",
@@ -14,8 +14,8 @@
     "set_battery_dynamic": false,
     "battery_dynamic_max": 0.9,
     "battery_dynamic_min": -0.9,
-    "weight_battery_discharge": 1,
-    "weight_battery_charge": 1,
+    "weight_battery_discharge": 0,
+    "weight_battery_charge": 0,
     "sensor_power_photovoltaics": "sensor.solax1_solar_energy_total",
     "sensor_power_load_no_var_loads": "sensor.solax1_grid_power",
     "sensor_replace_zero": [
@@ -27,14 +27,16 @@
     ],
     "load_negative": false,
     "set_zero_min": true,
-    "number_of_deferrable_loads": 2,
+    "number_of_deferrable_loads": 3,
     "nominal_power_of_deferrable_loads": [
         3000,
-        750
+        750,
+        2000
     ],
     "operating_hours_of_each_deferrable_load": [
         4,
-        0
+        10,
+        1
     ],
     "weather_forecast_method": "open-meteo",
     "load_forecast_method": "naive",
@@ -42,11 +44,9 @@
     "load_cost_forecast_method": "csv",
     "power_tariff_company": "ellevio",
     "start_timesteps_of_each_deferrable_load": [
-        0,
         0
     ],
     "end_timesteps_of_each_deferrable_load": [
-        0,
         0
     ],
     "load_peak_hour_periods": {
@@ -81,11 +81,11 @@
     ],
     "load_peak_hours_cost": 0.19,
     "load_offpeak_hours_cost": 0.14,
-    "set_use_tariff_peaks": true,
+    "set_use_tariff_peaks": false,
     "production_price_forecast_method": "csv",
     "photovoltaic_production_sell_price": 0.1419,
-    "maximum_power_from_grid": 1999,
-    "maximum_power_to_grid": 15000,
+    "maximum_power_from_grid": 50000,
+    "maximum_power_to_grid": 50000,
     "set_use_pv": true,
     "pv_module_model": [
         "CSUN_Eurasia_Energy_Systems_Industry_and_Trade_CSUN295_60M"
@@ -105,13 +105,13 @@
     "strings_per_inverter": [
         1
     ],
-    "inverter_is_hybrid": true,
+    "inverter_is_hybrid": false,
     "compute_curtailment": false,
     "set_use_battery": true,
     "battery_discharge_power_max": 5000,
     "battery_charge_power_max": 5000,
-    "battery_discharge_efficiency": 0.95,
-    "battery_charge_efficiency": 0.95,
+    "battery_discharge_efficiency": 1,
+    "battery_charge_efficiency": 1,
     "battery_nominal_energy_capacity": 20000,
     "battery_minimum_state_of_charge": 0.1,
     "battery_maximum_state_of_charge": 0.9,
@@ -124,28 +124,22 @@
     "v2g_weight_battery_charge": 0,
     "start_timesteps_of_each_available_window": [
         0,
-        5,
-        13,
-        18
+        17
     ],
     "end_timesteps_of_each_available_window": [
-        3,
-        7,
-        15,
-        24
+        8,
+        23
     ],
-    "number_of_available_windows": 4,
+    "number_of_available_windows": 2,
     "vehicle_use_charge_min": 0.5,
     "vehicle_leave_subtract": [
-        0.05,
-        0.05,
-        0.1
+        0.14
     ],
     "v2g_battery_discharge_power_max": 10000,
     "v2g_battery_charge_power_max": 10000,
-    "v2g_battery_discharge_efficiency": 0.95,
-    "v2g_battery_charge_efficiency": 0.95,
-    "v2g_battery_nominal_energy_capacity": 75000,
+    "v2g_battery_discharge_efficiency": 1,
+    "v2g_battery_charge_efficiency": 1,
+    "v2g_battery_nominal_energy_capacity": 40000,
     "v2g_battery_minimum_state_of_charge": 0.1,
     "v2g_battery_maximum_state_of_charge": 0.9,
     "v2g_battery_start_state_of_charge": 0.8,

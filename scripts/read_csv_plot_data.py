@@ -63,6 +63,7 @@ if __name__ == "__main__":
         "gain_selfcons",
     ]
     data = pd.DataFrame(index=data_cost.index, columns=cols_to_plot)
+    data["P_peak"] = data_cost["P_peak"]
     data["P_PV"] = data_cost["P_PV"]
     data["P_v2g"] = data_cost["P_v2g"]
     data["P_Load"] = data_cost["P_Load"]

@@ -336,6 +336,13 @@ def treat_runtimeparams(
             "type_var": "batt",
             "optimization_time_step": 60
         },
+        "sensor.p_peak_forecast": {
+            "name": "P_peak",
+            "device_class": "power",
+            "unit_of_measurement": "W",
+            "friendly_name": "Max power",
+            "optimization_time_step": 60
+        },
         "sensor.v2g_soc_batt_forecast": {
             "name": "v2g_SOC_opt",
             "device_class": "battery",
@@ -956,8 +963,7 @@ def get_yaml_parse(params: str, logger: logging.Logger) -> Tuple[dict, dict, dic
 
     return retrieve_hass_conf, optim_conf, plant_conf
 
-
-def get_injection_dict(df: pd.DataFrame, plot_size: Optional[int] = 1366) -> dict:
+def get_injection_dict(df: pd.DataFrame, num_avb_win, starts, ends, plot_size: Optional[int] = 1366) -> dict:
     """
     Build a dictionary with graphs and tables for the webui.
 
@@ -1013,8 +1019,12 @@ def get_injection_dict(df: pd.DataFrame, plot_size: Optional[int] = 1366) -> dic
     )
     fig_2.update_layout(xaxis_title="Timestamp", yaxis_title="System costs (currency)")
     if "v2g_SOC_opt" in df.columns.to_list():
+        soc_full = df["v2g_SOC_opt"]
+        soc_masked = df["v2g_SOC_opt"].copy()
+        for i in range(num_avb_win):
+            soc_masked.iloc[starts[i]:ends[i]] = None  # mask those parts
         fig_3 = px.line(
-            df["v2g_SOC_opt"],
+            pd.concat([soc_full.rename("v2g_SOC_opt"), soc_masked.rename("Away")], axis=1),
             title="EV state of charge schedule after optimization results",
             template="presentation",
             line_shape="hv",
