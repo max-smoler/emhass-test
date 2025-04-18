@@ -84,7 +84,7 @@
     "set_use_tariff_peaks": false,
     "production_price_forecast_method": "csv",
     "photovoltaic_production_sell_price": 0.1419,
-    "maximum_power_from_grid": 50000,
+    "maximum_power_from_grid": 20000,
     "maximum_power_to_grid": 50000,
     "set_use_pv": true,
     "pv_module_model": [
@@ -128,7 +128,7 @@
     ],
     "end_timesteps_of_each_available_window": [
         8,
-        23
+        24
     ],
     "number_of_available_windows": 2,
     "vehicle_use_charge_min": 0.5,

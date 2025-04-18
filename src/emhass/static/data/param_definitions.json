@@ -172,8 +172,8 @@
   },
   "Tariff": {
     "set_use_tariff_peaks": {
-      "friendly_name": "Enable usage of power peak billing",
-      "Description": "Set to True if we should consider a billing based on power peaks. Defaults to False",
+      "friendly_name": "Enable usage of power peak billing (experimental)",
+      "Description": "Separate method for power_peak_tariff billing. Only possible if costfun != 'power_peak_tariffs'",
       "input": "boolean",
       "default_value": false
     },
@@ -189,13 +189,16 @@
     },
     "power_tariff_company": {
       "friendly_name": "Power Tariff Company",
-      "Description": "Define the company that provides your electricity.",
+      "Description": "Define the company that provides your electricity. Relevant if costfun == 'power_peak_tariffs'. Defaults to ellevio.",
       "input": "select",
       "select_options": [
         "goteborg_energi",
         "ellevio"
       ],
-      "default_value": "ellevio"
+      "default_value": "ellevio",
+      "requires":{
+        "costfun": "power_peak_tariffs"
+      } 
     },
     "load_peak_hour_periods": {
       "friendly_name": "List peak hour periods",

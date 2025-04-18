@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import pulp as plp
 from pulp import COIN_CMD, GLPK_CMD, PULP_CBC_CMD
+from calendar import monthrange
 
 
 class Optimization:
@@ -110,12 +111,6 @@ class Optimization:
             )
             self.lp_solver_path = "/usr/bin/cbc"
 
-    # def def_is_within_demand_window(self, current_timestamp: int) -> bool:
-    #     if self.power_tariff_company == "ellevio":
-    #         tariff_window_start = 6
-    #         tariff_window_end = 22
-    #     return tariff_window_start <= current_timestamp < tariff_window_end
-
     def perform_optimization(
         self,
         data_opt: pd.DataFrame,
@@ -126,7 +121,6 @@ class Optimization:
         soc_init: Optional[float] = None,
         soc_final: Optional[float] = None,
         v2g_soc_init: Optional[float] = None,
-        v2g_soc_final: Optional[float] = None,
         def_total_hours: Optional[list] = None,
         def_total_timestep: Optional[list] = None,
         def_start_timestep: Optional[list] = None,
@@ -194,11 +188,6 @@ class Optimization:
         if self.optim_conf["set_use_v2g"]:
             if v2g_soc_init is None:
                 v2g_soc_init = self.plant_conf["v2g_battery_start_state_of_charge"]
-            if v2g_soc_final is None:
-                if v2g_soc_init is not None:
-                    v2g_soc_final = v2g_soc_init
-                else:
-                    v2g_soc_final = self.plant_conf["v2g_battery_start_state_of_charge"]
 
         # If def_total_timestep os set, bypass def_total_hours
         if def_total_timestep is not None:
@@ -236,15 +225,20 @@ class Optimization:
         n = len(data_opt.index)
         set_I = range(n)
         M = 10e10
-        cap_weight = np.ones(n)
 
-        # In cap_weights halves the costs of effect peaks in the night
         if self.costfun == "power_peak_tariffs":
             if self.power_tariff_company == "ellevio":
                 tariff_window_start = 6
                 tariff_window_end = 22
-            cap_weight = 0.5 * np.ones(n)
-            cap_weight[tariff_window_start:tariff_window_end] = 1
+                set_I_day = set_I[tariff_window_start:tariff_window_end]
+                set_I_night = np.concatenate((set_I[:tariff_window_start], set_I[tariff_window_end:]))
+                tariff_cost = 81.25         # Kr/kW
+                transfer_cost = 0.0625      # Kr/kWh
+                fixed_cost = 365            # Kr/månad (med 16A säkring)
+            if self.power_tariff_company == "goteborg_energi":
+                tariff_cost = 45            # Kr/kW
+                transfer_cost = 0.25        # Kr/kWh 
+                fixed_cost = 185            # Kr/månad   
 
         ## Add decision variables
         P_grid_neg = {
@@ -256,11 +250,42 @@ class Optimization:
             )
             for i in set_I
         }
-        P_peak = plp.LpVariable(
-                cat="Continuous",
-                lowBound=0,
-                name="P_peak{}"
-            )
+        if self.costfun == "power_peak_tariffs":
+            if self.power_tariff_company == "ellevio":
+                P_peak_day = plp.LpVariable(
+                        cat="Continuous",
+                        lowBound=0,
+                        name="P_peak_day"
+                    )
+
+                P_peak_night = plp.LpVariable(
+                        cat="Continuous",
+                        lowBound=0,
+                        name="P_peak_night"
+                    )
+
+                peak_is_day = plp.LpVariable(
+                    cat="Binary", name="peak_is_day"
+                )
+            elif self.power_tariff_company == "goteborg_energi":
+                P_peak = plp.LpVariable(
+                    cat="Continuous",
+                    lowBound=0,
+                    name="P_peak"
+                )
+
+        if self.optim_conf["set_use_tariff_peaks"]:
+            P_grid_pos_slack = {
+                (i): plp.LpVariable(
+                    cat="Continuous",
+                    lowBound=0,
+                    name="P_grid_pos_slack{}".format(i),
+                )
+                for i in set_I
+            }
+
+        v2g_SOC_final = plp.LpVariable(cat="Continuous", lowBound=0, upBound= 1, name="v2g_SOC_final")
+    
 
         P_grid_pos = {
             (i): plp.LpVariable(
@@ -440,7 +465,7 @@ class Optimization:
                 )
             else:
                 objective = plp.lpSum(
-                    -0.001 * self.timeStep * unit_load_cost[i] * (P_grid_pos[i]) # + P_grid_pos_add[i])
+                    -0.001 * self.timeStep * unit_load_cost[i] * (P_grid_pos[i])
                     for i in set_I
                 )
                 
@@ -462,16 +487,45 @@ class Optimization:
                 )
             else:
                 self.logger.error("Not a valid option for type_self_conso parameter")
-        # 3 kr per kw per dag på peaken men kan ändras till en variabel beroende på tariff företag
+
         elif self.costfun == "power_peak_tariffs":
-            objective = -0.001 * P_peak * 3 + plp.lpSum(
-                    -0.001
-                    * self.timeStep
-                    * unit_prod_price[i] * P_grid_neg[i]
-                    for i in set_I
-                )
+            month = data_opt.index[0].month
+            year = data_opt.index[0].year
+            days_this_month = monthrange(year, month)[1]
+            if self.power_tariff_company == "ellevio":
+                objective = (-0.001 * (P_peak_day + 0.5 * P_peak_night) * tariff_cost - fixed_cost) / days_this_month
+                + plp.lpSum(
+                        -0.001
+                        * self.timeStep
+                        * (unit_prod_price[i] * P_grid_neg[i]
+                        + transfer_cost * P_grid_pos[i])
+                        for i in set_I
+                    )
+            elif self.power_tariff_company == "goteborg_energi":
+                objective = (-0.001 * P_peak * tariff_cost - fixed_cost) / days_this_month
+                + plp.lpSum(
+                        -0.001
+                        * self.timeStep
+                        * (unit_prod_price[i] * P_grid_neg[i]
+                        + transfer_cost * P_grid_pos[i])
+                        for i in set_I
+                    )
+            # Cost of having a low battery at the end of the optimization window
+            objective -= 0.001 * (self.plant_conf["v2g_battery_maximum_state_of_charge"] - v2g_SOC_final) * self.plant_conf["v2g_battery_nominal_energy_capacity"] / 24 * tariff_cost
         else:
             self.logger.error("The cost function specified type is not valid")
+
+        if self.costfun != "power_peak_tariffs":
+            if self.optim_conf["set_use_tariff_peaks"]:
+                penalty_weight = 1000  # Adjust this number as needed
+
+                objective += plp.lpSum(
+                    penalty_weight * P_grid_pos_slack[i] * self.timeStep
+                    for i in set_I
+                ) 
+
+            # Cost of having a low battery at the end of the optimization window
+            objective -= 0.001 * (self.plant_conf["v2g_battery_maximum_state_of_charge"] - v2g_SOC_final) * self.plant_conf["v2g_battery_nominal_energy_capacity"] * unit_load_cost[0]
         # Add more terms to the objective function in the case of battery use
         if self.optim_conf["set_use_battery"]:
             objective = objective + plp.lpSum(
@@ -664,16 +718,17 @@ class Optimization:
                 )
 
         # Avoid injecting and consuming from grid at the same time
-        constraints.update(
-            {
-                "constraint_pgridpos_{}".format(i): plp.LpConstraint(
-                    e=P_grid_pos[i] - self.plant_conf["maximum_power_from_grid"] * D[i],
-                    sense=plp.LpConstraintLE,
-                    rhs=0,
-                )
-                for i in set_I
-            }
-        )
+        if self.costfun != "power_peak_tariffs":
+            constraints.update(
+                {
+                    "constraint_pgridpos_{}".format(i): plp.LpConstraint(
+                        e=P_grid_pos[i] - self.plant_conf["maximum_power_from_grid"] * D[i],
+                        sense=plp.LpConstraintLE,
+                        rhs=0,
+                    )
+                    for i in set_I
+                }
+            )
         constraints.update(
             {
                 "constraint_pgridneg_{}".format(i): plp.LpConstraint(
@@ -1052,7 +1107,7 @@ class Optimization:
         # The v2g battery constraints
         if self.optim_conf["set_use_v2g"]:
             # Treat window contraints for v2g battery
-            v2g_SOC_opt_penalty = np.zeros(n) # Used later to subtract SOC for usage windows
+            v2g_SOC_opt_penalty = np.zeros(n)
             for k in range (self.optim_conf["number_of_available_windows"]):
 
                 # Validate and define EV available window
@@ -1544,6 +1599,26 @@ class Optimization:
             )
             constraints.update(
                 {
+                    "v2g_constraint_socfinal_{}".format(0): plp.LpConstraint(
+                        e=plp.lpSum(
+                            v2g_P_sto_pos[i]
+                            * (1 / self.plant_conf["v2g_battery_discharge_efficiency"])
+                            + self.plant_conf["v2g_battery_charge_efficiency"]
+                            * v2g_P_sto_neg[i]
+                            + v2g_SOC_final
+                            * self.plant_conf["v2g_battery_nominal_energy_capacity"]
+                            / self.timeStep
+                            for i in set_I
+                        ),
+                        sense=plp.LpConstraintEQ,
+                        rhs=v2g_soc_init
+                        * self.plant_conf["v2g_battery_nominal_energy_capacity"]
+                        / self.timeStep,
+                    )
+                }
+            )
+            constraints.update(
+                {
                     "v2g_constraint_minsocfinal_{}".format(0): plp.LpConstraint(
                         e=plp.lpSum(
                             v2g_P_sto_pos[i]
@@ -1593,14 +1668,57 @@ class Optimization:
 
         # Power peak tariff contraint
         if self.costfun == "power_peak_tariffs":
-            constraints.update(
-                {
-                    "constraint_power_peak_tariffs{}".format(i): plp.LpConstraint(
-                        e=P_grid_pos[i] - P_peak, sense=plp.LpConstraintLE, rhs=0
-                    )
-                    for i in set_I
-                }
-            )
+            if self.power_tariff_company == "ellevio":
+                constraints.update(
+                    {
+                        "constraint_peak_is_day": plp.LpConstraint(
+                            e=M*peak_is_day - P_peak_day, sense=plp.LpConstraintGE, rhs=0
+                        )
+                    }
+                )
+                constraints.update(
+                    {
+                        "constraint_peak_is_night": plp.LpConstraint(
+                            e=M*(1-peak_is_day) - P_peak_night, sense=plp.LpConstraintGE, rhs=0
+                        )
+                    }
+                )
+                constraints.update(
+                    {
+                        "constraint_power_peak_tariffs_day{}".format(i): plp.LpConstraint(
+                            e=P_grid_pos[i] - (P_peak_day + 0.5*P_peak_night), sense=plp.LpConstraintLE, rhs=0
+                        )
+                        for i in set_I_day
+                    }
+                )
+                constraints.update(
+                    {
+                        "constraint_power_peak_tariffs_night{}".format(i): plp.LpConstraint(
+                            e=P_grid_pos[i] - (2*P_peak_day + P_peak_night), sense=plp.LpConstraintLE, rhs=0
+                        )
+                        for i in set_I_night
+                    }
+                )
+            elif self.power_tariff_company == "goteborg_energi":
+                constraints.update(
+                    {
+                        "constraint_power_peak_tariffs{}".format(i): plp.LpConstraint(
+                            e=P_grid_pos[i] - P_peak, sense=plp.LpConstraintLE, rhs=0
+                        )
+                        for i in set_I
+                    }
+                )
+
+        # Slack constraint
+        if self.costfun != "power_peak_tariffs" and self.optim_conf["set_use_tariff_peaks"]:
+            constraints.update({
+                 "elastic_gridlimit{}".format(i): plp.LpConstraint(
+                     e=P_grid_pos[i] - P_grid_pos_slack[i],
+                     sense=plp.LpConstraintLE,
+                     rhs=self.plant_conf["maximum_power_from_grid"]
+                 )
+                 for i in set_I
+             })
         opt_model.constraints = constraints
 
         ## Finally, we call the solver to solve our optimization model:
@@ -1771,20 +1889,31 @@ class Optimization:
                     )
                     for i in set_I
                 ]
-        elif self.costfun == "power_peak_tariffs":
+        elif self.costfun == "power_peak_tariffs": 
             opt_tp["cost_fun_ppt"] = [
                     -0.001
                     * self.timeStep
                     * (
                         unit_prod_price[i] * P_grid_neg[i].varValue
+                        + transfer_cost * P_grid_pos[i].varValue
                     )
+                    - fixed_cost / (len(set_I) * days_this_month)
                     for i in set_I
             ]
-            # Power peak postition
-            P_grid_pos_values = {i: plp.value(P_grid_pos[i]) for i in P_grid_pos}
-            max_index = max(P_grid_pos_values, key=P_grid_pos_values.get)
-            opt_tp["cost_fun_ppt"][max_index] -= 0.001 * P_peak.varValue * 3
-            print(P_peak.varValue)
+            # Calculates the power peak position and subtracts the cost of the peak there
+            if self.power_tariff_company == "ellevio":
+                P_grid_pos_values = {i: plp.value(P_grid_pos[i]) for i in P_grid_pos}
+                if P_peak_night.varValue != 0:
+                    max_index = max(P_grid_pos_values, key=P_grid_pos_values.get)
+                else:
+                    P_grid_pos_items = list(P_grid_pos_values.items())
+                    P_grid_pos_values_day = dict(P_grid_pos_items[tariff_window_start:tariff_window_end])
+                    max_index = max(P_grid_pos_values_day, key=P_grid_pos_values_day.get)
+                opt_tp["cost_fun_ppt"][max_index] -= 0.001 * (P_peak_day.varValue + 0.5 * P_peak_night.varValue) * tariff_cost / days_this_month
+            else:
+                P_grid_pos_values = {i: plp.value(P_grid_pos[i]) for i in P_grid_pos}
+                max_index = max(P_grid_pos_values, key=P_grid_pos_values.get)
+                opt_tp["cost_fun_ppt"][max_index] -= 0.001 * P_peak.varValue * tariff_cost / days_this_month         
         else:
             self.logger.error("The cost function specified type is not valid")
 
