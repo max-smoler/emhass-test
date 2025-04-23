@@ -91,6 +91,7 @@ class Optimization:
         self.var_prod_price = var_prod_price
         self.optim_status = None
         self.power_tariff_company = self.optim_conf["power_tariff_company"]
+        self.case_test = self.optim_conf["case_test"]
         if "lp_solver" in optim_conf.keys():
             self.lp_solver = optim_conf["lp_solver"]
         else:
@@ -493,25 +494,48 @@ class Optimization:
             year = data_opt.index[0].year
             days_this_month = monthrange(year, month)[1]
             if self.power_tariff_company == "ellevio":
-                objective = (-0.001 * (P_peak_day + 0.5 * P_peak_night) * tariff_cost - fixed_cost) / days_this_month
-                + plp.lpSum(
+                if self.case_test:
+                    objective = plp.lpSum(
                         -0.001
                         * self.timeStep
-                        * (unit_prod_price[i] * P_grid_neg[i]
-                        + transfer_cost * P_grid_pos[i])
+                        * (
+                            unit_load_cost[i] * P_grid_pos[i]
+                            + unit_prod_price[i] * P_grid_neg[i]
+                        )
                         for i in set_I
                     )
+                else:
+                    objective = (-0.001 * (P_peak_day + 0.5 * P_peak_night) * tariff_cost - fixed_cost) / days_this_month
+                    + plp.lpSum(
+                            -0.001
+                            * self.timeStep
+                            * (unit_prod_price[i] * P_grid_neg[i]
+                            + transfer_cost * P_grid_pos[i])
+                            for i in set_I
+                        )
             elif self.power_tariff_company == "goteborg_energi":
-                objective = (-0.001 * P_peak * tariff_cost - fixed_cost) / days_this_month
-                + plp.lpSum(
+                if self.case_test:
+                    objective = plp.lpSum(
                         -0.001
                         * self.timeStep
-                        * (unit_prod_price[i] * P_grid_neg[i]
-                        + transfer_cost * P_grid_pos[i])
+                        * (
+                            unit_load_cost[i] * P_grid_pos[i]
+                            + unit_prod_price[i] * P_grid_neg[i]
+                        )
                         for i in set_I
                     )
+                else:
+                    objective = (-0.001 * P_peak * tariff_cost - fixed_cost) / days_this_month
+                    + plp.lpSum(
+                            -0.001
+                            * self.timeStep
+                            * (unit_prod_price[i] * P_grid_neg[i]
+                            + transfer_cost * P_grid_pos[i])
+                            for i in set_I
+                        )
             # Cost of having a low battery at the end of the optimization window
-            objective -= 0.001 * (self.plant_conf["v2g_battery_maximum_state_of_charge"] - v2g_SOC_final) * self.plant_conf["v2g_battery_nominal_energy_capacity"] / 24 * tariff_cost
+            if self.optim_conf["set_use_v2g"]:
+                objective -= 0.001 * (self.plant_conf["v2g_battery_maximum_state_of_charge"] - v2g_SOC_final) * self.plant_conf["v2g_battery_nominal_energy_capacity"] / 24 * tariff_cost
         else:
             self.logger.error("The cost function specified type is not valid")
 

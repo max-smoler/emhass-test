@@ -11,6 +11,15 @@
         "power_peak_tariffs"
       ],
       "default_value": "profit"
+    },    
+    "case_test": {
+      "friendly_name": "Careless tariff-user test",
+      "Description": "Set true to test the power_peak_tariff billing without optimizing for it. Requires costfun == 'power_peak_tariffs'. Also needs a constant unit_load_cost to be logical.",
+      "input": "boolean",
+      "default_value": false,
+      "requires": {
+        "costfun": "power_peak_tariffs"
+      } 
     },
     "sensor_power_photovoltaics": {
       "friendly_name": "Sensor power sensor",

@@ -1,6 +1,7 @@
 {
     "logging_level": "DEBUG",
-    "costfun": "profit",
+    "costfun": "power_peak_tariffs",
+    "case_test": true,
     "optimization_time_step": 60,
     "historic_days_to_retrieve": 3,
     "method_ts_round": "nearest",
@@ -116,7 +117,7 @@
     "battery_minimum_state_of_charge": 0.1,
     "battery_maximum_state_of_charge": 0.9,
     "battery_target_state_of_charge": 0.6,
-    "set_use_v2g": false,
+    "set_use_v2g": true,
     "v2g_set_battery_dynamic": false,
     "v2g_battery_dynamic_max": 0.9,
     "v2g_battery_dynamic_min": -0.9,
